@@ -8,7 +8,6 @@
 
 2.下拉master分支的内容，并push自己的更改到dev分支，然后请求和master分支合并
 - git pull origin master
-- git checkout dev
 - git add -A
 - git status
 - git commit -m ""
@@ -18,6 +17,8 @@
 - git merge dev
 
 3.可能用到的其他操作
+- git push [路径/文件名] push单个文件
+- git checkout origin master [路径/文件名] 更新单个文件
 - git push origin dev 提交更改到dev分支
 - git merge dev　合并dev分支到master
 - git reset --hard [版本号] 恢复到之前的版本
