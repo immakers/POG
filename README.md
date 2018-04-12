@@ -22,3 +22,5 @@
 - git merge dev　合并dev分支到master
 - git reset --hard [版本号] 恢复到之前的版本
 - git push --force origin master 强制提交到master分支
+
+## 任务分工
