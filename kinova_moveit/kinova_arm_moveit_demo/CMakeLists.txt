@@ -62,6 +62,12 @@ target_link_libraries(talker1 ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_dr
 install(TARGETS talker1 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 ## end
 
+## added by qcrong in 2018/4/8
+add_executable(eye2hand_calib_control src/eye2hand_calib_control.cpp)
+target_link_libraries(eye2hand_calib_control ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS eye2hand_calib_control DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+## end
+
 add_executable(work_scene src/work_scene.cpp)
 target_link_libraries(work_scene ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS work_scene DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
