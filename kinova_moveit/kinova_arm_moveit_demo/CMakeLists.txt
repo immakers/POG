@@ -20,17 +20,33 @@ find_package(catkin REQUIRED
 )
 
 find_package(Boost REQUIRED system filesystem date_time thread)
+find_package(Eigen REQUIRED)
+
+find_package(kinova_driver REQUIRED)
+
+#######################################
+## msg add change by qcrong 20180416 ##
+#######################################
+add_message_files(
+	FILES
+	targetState.msg
+	targetsVector.msg
+)
+
+generate_messages(
+   DEPENDENCIES
+   std_msgs  # Or other packages containing msgs
+)
 
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS 
-    moveit_core
-    moveit_ros_planning_interface
-    interactive_markers
+  moveit_core
+  moveit_ros_planning_interface
+  interactive_markers
+  CATKIN_DEPENDS message_runtime  #add by qcrong 20180416
 )
-find_package(Eigen REQUIRED)
 
-find_package(kinova_driver REQUIRED)
 
 ###########
 ## Build ##
@@ -60,6 +76,18 @@ install(TARGETS simple_move DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 add_executable(talker1 src/talker1.cpp)
 target_link_libraries(talker1 ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS talker1 DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+## end
+
+## added by qcrong in 2018/4/8
+add_executable(eye2hand_calib_control src/eye2hand_calib_control.cpp)
+target_link_libraries(eye2hand_calib_control ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS eye2hand_calib_control DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+## end
+
+## added by qcrong in 2018/4/17
+add_executable(our_pick_place src/our_pick_place.cpp)
+target_link_libraries(our_pick_place ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS our_pick_place DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 ## end
 
 add_executable(work_scene src/work_scene.cpp)
