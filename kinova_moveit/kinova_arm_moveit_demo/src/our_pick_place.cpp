@@ -1,3 +1,4 @@
+#include <ros/ros.h>
 #include <moveit/move_group_interface/move_group.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
@@ -12,17 +13,32 @@
 #include <iostream>
 #include <vector>
 
+//手指控制头文件 add by yang 20180418
+#include "kinova_driver/kinova_tool_pose_action.h"
+#include "kinova_driver/kinova_joint_angles_action.h"
+#include "kinova_driver/kinova_fingers_action.h"
+
 #include <std_msgs/Int8.h>
 #include "kinova_arm_moveit_demo/targetsVector.h"	//自定义消息类型，所有识别定位结果
 #include "kinova_arm_moveit_demo/targetState.h"	//自定义消息类型，单个识别定位结果
 
 using namespace std;
 
+//手指client类型自定义
+typedef actionlib::SimpleActionClient<kinova_msgs::SetFingersPositionAction> Finger_actionlibClient;
+
 //全局变量
 const double FINGER_MAX = 6400;	//手指开合程度：0完全张开，6400完全闭合
 const int n_MAX=10;			//同一物品最大抓取次数
 vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
+
+//定义机器人类型，手指控制 added by yang 20180418
+std::string kinova_robot_type = "j2s7s300";
+std::string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action/finger_positions";    //手指控制服务器的名称
+
+//定义手指控制client added by yang 20180418
+Finger_actionlibClient client(Finger_action_address, true);
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 bool getTags(vector<int>& targetsTag);
@@ -31,7 +47,7 @@ void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg);
 //如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完返回3
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint);
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
-void fingerControl(float pose);
+bool fingerControl(double finger_turn);
 
 
 int main(int argc, char **argv)
@@ -44,7 +60,7 @@ int main(int argc, char **argv)
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 	//等待rviz启动，最后集成用一个launch文件启动时需要
-	//ros::Duration(10.0).sleep();;
+	//ros::Duration(10.0).sleep();
 	
 	moveit::planning_interface::MoveGroup arm_group("arm");
 	arm_group.setEndEffectorLink( "j2s7s300_end_effector");
@@ -53,7 +69,10 @@ int main(int argc, char **argv)
 	//实物控制的话，可删掉这两句－－删掉是为了减少Rviz的使用所占用的时间
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
 	moveit_msgs::DisplayTrajectory display_trajectory;
-
+        
+        ROS_INFO("Waiting for action server to start.");
+        client.waitForServer();
+        ROS_INFO("Action server started, waiting for goal.");
 	//发布消息和订阅消息
 	ros::Publisher detectTarget_pub = node_handle.advertise<std_msgs::Int8>("dectet_target", 10);  //让visual_detect节点检测目标
 	ros::Subscriber detectResult_sub = node_handle.subscribe("detect_result", 10, detectResultCB);				//接收visual_detect检测结果
@@ -149,9 +168,33 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 	return true;
 }
 
-//手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
-void fingerControl(float pose)
+//手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合 added by yang 20180418
+bool fingerControl(double finger_turn)
 {
-
-	return;
+    if (finger_turn < 0)
+    {
+        finger_turn = 0.0;
+    }
+    else
+    {
+        finger_turn = std::min(finger_turn, 1.0);
+    }
+    kinova_msgs::SetFingersPositionGoal goal;
+    goal.fingers.finger1 = finger_turn * FINGER_MAX;
+    goal.fingers.finger2 = goal.fingers.finger1;
+    goal.fingers.finger3 = goal.fingers.finger1;
+    client.sendGoal(goal);
+    if (client.waitForResult(ros::Duration(5.0)))
+    {
+        client.getResult();
+        return true;
+    }
+    else
+    {
+        client.cancelAllGoals();
+        ROS_WARN_STREAM("The gripper action timed-out");
+        return false;
+    }
 }
+
+
