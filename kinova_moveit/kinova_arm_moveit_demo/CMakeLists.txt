@@ -35,6 +35,7 @@ add_message_files(
 
 generate_messages(
    DEPENDENCIES
+   actionlib_msgs
    std_msgs  # Or other packages containing msgs
 )
 
@@ -101,6 +102,10 @@ install(TARGETS pick_place DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 add_executable(test_accuracy src/test_accuracy.cpp include/test_accuracy.h)
 target_link_libraries(test_accuracy ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS test_accuracy DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+add_executable(finger_control src/finger_control.cpp)
+target_link_libraries(finger_control ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS finger_control DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})   #added by yang 20180417
 
 
 #get_cmake_property(_variableNames VARIABLES)
