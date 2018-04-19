@@ -38,7 +38,7 @@ int main(int argc, char **argv)
   {
     if (flag == false)
     {
-      ros::spinOnce();
+      //ros::spinOnce();
       group.setStartState(*group.getCurrentState());
 
       // 下面这几句只是为了展示规划的起始点
