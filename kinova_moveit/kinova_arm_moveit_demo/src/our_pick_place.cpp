@@ -32,6 +32,8 @@ const double FINGER_MAX = 6400;	//手指开合程度：0完全张开，6400完�
 const int n_MAX=10;			//同一物品最大抓取次数
 vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
+geometry_msgs::Pose startPose;	//机械臂初始位置
+geometry_msgs::Pose placePose;	//机械臂抓取放置位置
 
 //定义机器人类型，手指控制 added by yang 20180418
 std::string kinova_robot_type = "j2s7s300";
@@ -109,6 +111,59 @@ int main(int argc, char **argv)
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩
+                geometry_msgs::Pose targetPose;	//定义抓取位姿
+                geometry_msgs::Point point;
+                geometry_msgs::Quaternion orientation;
+                
+                point.x = curTargetPoint.x;
+                point.y = curTargetPoint.y;
+                point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
+
+                orientation.x = 0;//方向竖直向下的四元数？？
+                orientation.y = 0;
+                orientation.z = -0.707;
+                orientation.w = 0.707;
+
+　　　　　　　　　　　　　　　　targetPose.Point = point;
+                targetPose.Quaternion = orientation;
+
+                //前往抓取点
+                arm_group.setPoseTarget(targetPose);
+                bool success = arm_group.move();
+
+                double tPlan = arm_group.getPlanningTime();
+                ROS_INFO("Planning time is [%lf]s.", tPlan);
+                ROS_INFO("Go to the goal and prepare for picking . %s",success?"":"FAILED");
+　
+                //抓取动作－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
+                //抓取完毕
+
+                //带着抓取物体回到起始位置
+                arm_group.setPoseTarget(startPose);
+                bool success = arm_group.move();
+
+                double tPlan = arm_group.getPlanningTime();
+                ROS_INFO("Planning time is [%lf]s.", tPlan);
+                ROS_INFO("Go to the start position with the goal. %s",success?"":"FAILED");
+
+                //带着抓取物体去放置位置
+                arm_group.setPoseTarget(placePose);
+                bool success = arm_group.move();
+
+                double tPlan = arm_group.getPlanningTime();
+                ROS_INFO("Planning time is [%lf]s.", tPlan);
+                ROS_INFO("Go to the placing position and prepare for placing. %s",success?"":"FAILED");
+
+                //松开爪子－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
+                //松开完毕
+
+                //回到初始位置
+                arm_group.setPoseTarget(startPose);
+                bool success = arm_group.move();
+
+                double tPlan = arm_group.getPlanningTime();
+                ROS_INFO("Planning time is [%lf]s.", tPlan);
+                ROS_INFO("Go back the start position. %s",success?"":"FAILED");
 
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
