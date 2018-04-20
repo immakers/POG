@@ -34,6 +34,7 @@ vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
 geometry_msgs::Pose startPose;	//机械臂初始位置
 geometry_msgs::Pose placePose;	//机械臂抓取放置位置
+moveit::planning_interface::MoveGroup arm_group("arm");//改为全局变量，方便机械臂运动规划的使用
 
 //定义机器人类型，手指控制 added by yang 20180418
 std::string kinova_robot_type = "j2s7s300";
@@ -50,6 +51,10 @@ void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg);
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint);
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
+//机械臂运动控制函数
+void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint);
+//插值函数
+
 
 
 int main(int argc, char **argv)
@@ -110,60 +115,8 @@ int main(int argc, char **argv)
 			{
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
-				//周佩
-                geometry_msgs::Pose targetPose;	//定义抓取位姿
-                geometry_msgs::Point point;
-                geometry_msgs::Quaternion orientation;
-                
-                point.x = curTargetPoint.x;
-                point.y = curTargetPoint.y;
-                point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
-
-                orientation.x = 0;//方向竖直向下的四元数？？
-                orientation.y = 0;
-                orientation.z = -0.707;
-                orientation.w = 0.707;
-
-　　　　　　　　　　　　　　　　targetPose.Point = point;
-                targetPose.Quaternion = orientation;
-
-                //前往抓取点
-                arm_group.setPoseTarget(targetPose);
-                bool success = arm_group.move();
-
-                double tPlan = arm_group.getPlanningTime();
-                ROS_INFO("Planning time is [%lf]s.", tPlan);
-                ROS_INFO("Go to the goal and prepare for picking . %s",success?"":"FAILED");
-　
-                //抓取动作－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
-                //抓取完毕
-
-                //带着抓取物体回到起始位置
-                arm_group.setPoseTarget(startPose);
-                bool success = arm_group.move();
-
-                double tPlan = arm_group.getPlanningTime();
-                ROS_INFO("Planning time is [%lf]s.", tPlan);
-                ROS_INFO("Go to the start position with the goal. %s",success?"":"FAILED");
-
-                //带着抓取物体去放置位置
-                arm_group.setPoseTarget(placePose);
-                bool success = arm_group.move();
-
-                double tPlan = arm_group.getPlanningTime();
-                ROS_INFO("Planning time is [%lf]s.", tPlan);
-                ROS_INFO("Go to the placing position and prepare for placing. %s",success?"":"FAILED");
-
-                //松开爪子－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
-                //松开完毕
-
-                //回到初始位置
-                arm_group.setPoseTarget(startPose);
-                bool success = arm_group.move();
-
-                double tPlan = arm_group.getPlanningTime();
-                ROS_INFO("Planning time is [%lf]s.", tPlan);
-                ROS_INFO("Go back the start position. %s",success?"":"FAILED");
+				//周佩---机械臂运动控制---执行抓取－放置－过程
+                cutAndGo(curTargetPoint);
 
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
@@ -252,4 +205,81 @@ bool fingerControl(double finger_turn)
     }
 }
 
+void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint)
+{
+//流程介绍
+//1--获得目标点并对路径进行插值
+//2--执行插值后的路径
+//3--到达目标点抓取物体
+//4--从目标点到放置点进行插值
+//5--执行插值后的路径
+//6--放置物体
+//7--等待下一个目标点
+    geometry_msgs::Pose targetPose;	//定义抓取位姿
+    geometry_msgs::Point point;
+    geometry_msgs::Quaternion orientation;
+                
+    point.x = curTargetPoint.x;//获取抓取位姿
+    point.y = curTargetPoint.y;
+    point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
 
+    orientation.x = 0;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－
+    orientation.y = 0;
+    orientation.z = -0.707;
+    orientation.w = 0.707;
+
+    targetPose.position = point;// 设置好目标位姿为可用的格式
+    targetPose.orientation = orientation;
+
+    //路径插值
+    std::vector<geometry_msgs::Pose> waypoints;
+
+    //获取当前位姿
+    arm_group.setStartState(*arm_group.getCurrentState());
+    geometry_msgs::PoseStamped msg;
+    msg = arm_group.getCurrentPose();
+
+    geometry_msgs::Pose current_pose;
+    current_pose = msg.pose;
+
+    geometry_msgs::Point position = current_pose.position;
+    int i = 0;
+
+
+    //前往抓取点
+    arm_group.setPoseTarget(targetPose);
+    bool success = arm_group.move();
+
+    double tPlan = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan);
+    ROS_INFO("Go to the goal and prepare for picking . %s",success?"":"FAILED");
+    //抓取动作－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
+    //抓取完毕
+
+    //带着抓取物体回到起始位置
+    arm_group.setPoseTarget(startPose);
+    success = arm_group.move();
+
+    tPlan = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan);
+    ROS_INFO("Go to the start position with the goal. %s",success?"":"FAILED");
+
+    //带着抓取物体去放置位置
+    arm_group.setPoseTarget(placePose);
+    success = arm_group.move();
+
+    tPlan = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan);
+    ROS_INFO("Go to the placing position and prepare for placing. %s",success?"":"FAILED");
+
+    //松开爪子－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
+    //松开完毕
+
+    //回到初始位置
+    arm_group.setPoseTarget(startPose);
+    success = arm_group.move();
+
+    tPlan = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan);
+    ROS_INFO("Go back the start position. %s",success?"":"FAILED");
+}
