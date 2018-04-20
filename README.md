@@ -1,3 +1,11 @@
+## 团队日志
+
+2018/4/20（Petori)
+> 把机械臂控制部分改写成函数，并使编译通过
+> 把`moveit::planning_interface::MoveGroup arm_group("arm")`改为全局变量，方便运动规划调用
+> 已找到路径点设置函数，准备明日补充路径插值部分，并补完机械臂运动控制部分
+
+
 ## 必看！！！
 - 关于github团队操作以当前repository（POG）master分支下的｀Github团队合作教程.pdf｀为准！
 
