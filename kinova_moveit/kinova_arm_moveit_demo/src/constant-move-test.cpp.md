@@ -11,12 +11,14 @@
 
 int main(int argc, char **argv)
 {
+
   ros::init(argc, argv, "simple_move");
   ros::NodeHandle node_handle;  
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
   moveit::planning_interface::MoveGroup group("arm");
+  moveit::planning_interface::MoveGroup::Plan plan;
 
   std::vector<geometry_msgs::Pose> waypoints;
 
@@ -29,7 +31,7 @@ int main(int argc, char **argv)
   random_pose2.setRotation(tf::Quaternion(0.68463, -0.22436, 0.68808, 0.086576));
 
   tf::Pose random_pose3;
-  random_pose3.setOrigin(tf::Vector3(0.24882, -0.4854,  0.45841));
+  random_pose3.setOrigin(tf::Vector3(0.24882, 0.2854,  0.45841));
   random_pose3.setRotation(tf::Quaternion(0.68463, -0.22436, 0.68808, 0.086576));
 
   geometry_msgs::Pose target_pose1;
@@ -57,6 +59,8 @@ int main(int argc, char **argv)
                                                0.01,  // eef_step
                                                0.0,   // jump_threshold
                                                trajectory);
+  plan.trajectory_ = trajectory; 
+  group.execute(plan);
 
   ROS_INFO("Visualizing plan over 4 (cartesian path) (%.2f%% acheived)",
         fraction * 100.0);   

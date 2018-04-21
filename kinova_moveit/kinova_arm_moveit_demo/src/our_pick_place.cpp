@@ -32,8 +32,7 @@ const double FINGER_MAX = 6400;	//手指开合程度：0完全张开，6400完�
 const int n_MAX=10;			//同一物品最大抓取次数
 vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
-geometry_msgs::Pose startPose;	//机械臂初始位置
-geometry_msgs::Pose placePose;	//机械臂抓取放置位置
+geometry_msgs::Pose placePose;	//机械臂抓取放置位置,为规划方便，将放置位置设为起始位置
 moveit::planning_interface::MoveGroup arm_group("arm");//改为全局变量，方便机械臂运动规划的使用
 
 //定义机器人类型，手指控制 added by yang 20180418
@@ -52,10 +51,11 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
 //机械臂运动控制函数
-void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint);
-//插值函数
-
-
+void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint);
+//抓取插值函数
+std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose);
+//放置插值函数
+std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose);
 
 int main(int argc, char **argv)
 {
@@ -104,6 +104,12 @@ int main(int argc, char **argv)
 	/*************************************/
 	/********目标抓取*********************/
 	/*************************************/
+    // 先前往放置位置
+    arm_group.setPoseTarget(placePose);
+    arm_group.move();
+    ROS_INFO("All ready, waiting for goal.");
+
+    //等待目标传入并执行
 	while(ros::ok())
 	{
 		if(getTargets==1)
@@ -116,7 +122,7 @@ int main(int argc, char **argv)
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
-                cutAndGo(curTargetPoint);
+                pickAndPlace(curTargetPoint);
 
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
@@ -205,7 +211,7 @@ bool fingerControl(double finger_turn)
     }
 }
 
-void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint)
+void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 {
 //流程介绍
 //1--获得目标点并对路径进行插值
@@ -223,16 +229,16 @@ void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint)
     point.y = curTargetPoint.y;
     point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
 
-    orientation.x = 0;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－
+    moveit::planning_interface::MoveGroup::Plan pick_plan;
+    moveit::planning_interface::MoveGroup::Plan place_plan;
+
+    orientation.x = 0;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     orientation.y = 0;
     orientation.z = -0.707;
     orientation.w = 0.707;
 
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
-
-    //路径插值
-    std::vector<geometry_msgs::Pose> waypoints;
 
     //获取当前位姿
     arm_group.setStartState(*arm_group.getCurrentState());
@@ -243,43 +249,177 @@ void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint)
     current_pose = msg.pose;
 
     geometry_msgs::Point position = current_pose.position;
-    int i = 0;
 
+    //抓取插值
+    std::vector<geometry_msgs::Pose> pickWayPoints;
+    pickWayPoints = pickInterpolate(current_pose, targetPose);
 
     //前往抓取点
-    arm_group.setPoseTarget(targetPose);
-    bool success = arm_group.move();
+    moveit_msgs::RobotTrajectory trajectory1;
+    arm_group.computeCartesianPath(pickWayPoints,
+                                   0.01,  // eef_step
+                                   0.0,   // jump_threshold
+                                   trajectory1);
 
-    double tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go to the goal and prepare for picking . %s",success?"":"FAILED");
-    //抓取动作－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
+    pick_plan.trajectory_ = trajectory1;
+    arm_group.execute(pick_plan);
+
+    double tPlan1 = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan1);
+    ROS_INFO("Go to the goal and prepare for picking .");
+
+    //抓取动作
+    fingerControl(0);
     //抓取完毕
 
-    //带着抓取物体回到起始位置
-    arm_group.setPoseTarget(startPose);
-    success = arm_group.move();
+    //放置插值
+    std::vector<geometry_msgs::Pose> placeWayPoints;
+    placeWayPoints = placeInterpolate(targetPose, placePose);
 
-    tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go to the start position with the goal. %s",success?"":"FAILED");
+    //前往放置点
+    moveit_msgs::RobotTrajectory trajectory2;
+    arm_group.computeCartesianPath(placeWayPoints,
+                                                 0.01,  // eef_step
+                                                 0.0,   // jump_threshold
+                                                 trajectory2);
+    place_plan.trajectory_ = trajectory2;
+    arm_group.execute(pick_plan);
 
-    //带着抓取物体去放置位置
-    arm_group.setPoseTarget(placePose);
-    success = arm_group.move();
+    double tPlan2 = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan2);
+    ROS_INFO("Go to the goal and prepare for placing . ");
 
-    tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go to the placing position and prepare for placing. %s",success?"":"FAILED");
-
-    //松开爪子－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
+    //松开爪子
+    fingerControl(1);
     //松开完毕
 
-    //回到初始位置
-    arm_group.setPoseTarget(startPose);
-    success = arm_group.move();
+}
+//抓取插值函数
+std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose)
+{
+    //从放置位置前往抓取位置
+    //插值后路径为＂----|＂形（先平移，后下落）
+    std::vector<geometry_msgs::Pose> pickWayPoints;
 
-    tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go back the start position. %s",success?"":"FAILED");
+    geometry_msgs::Pose midPose1;
+    geometry_msgs::Pose midPose2;
+    geometry_msgs::Pose midPose3;
+    geometry_msgs::Pose midPose4;
+
+    geometry_msgs::Point startPoint;
+    geometry_msgs::Point targetPoint;
+    geometry_msgs::Point midPoint;
+
+    startPoint = startPose.position;
+    targetPoint = targetPose.position;
+
+    // midPose1
+    midPoint.x = startPoint.x + 0.25 * (targetPoint.x - startPoint.x);
+    midPoint.y = startPoint.y + 0.25 * (targetPoint.y - startPoint.y);
+    midPoint.z = startPoint.z;
+
+    midPose1.position = midPoint;
+    midPose1.orientation = targetPose.orientation;
+
+    pickWayPoints.push_back(midPose1);
+
+    // midPose2
+    midPoint.x = startPoint.x + 0.5 * (targetPoint.x - startPoint.x);
+    midPoint.y = startPoint.y + 0.5 * (targetPoint.y - startPoint.y);
+    midPoint.z = startPoint.z;
+
+    midPose2.position = midPoint;
+    midPose2.orientation = targetPose.orientation;
+
+    pickWayPoints.push_back(midPose2);
+
+    // midPose3
+    midPoint.x = startPoint.x + 0.75 * (targetPoint.x - startPoint.x);
+    midPoint.y = startPoint.y + 0.75 * (targetPoint.y - startPoint.y);
+    midPoint.z = startPoint.z;
+
+    midPose3.position = midPoint;
+    midPose3.orientation = targetPose.orientation;
+
+    pickWayPoints.push_back(midPose3);
+
+    // midPose4
+    midPoint.x = targetPoint.x;
+    midPoint.y = targetPoint.y;
+    midPoint.z = startPoint.z;
+
+    midPose4.position = midPoint;
+    midPose4.orientation = targetPose.orientation;
+
+    pickWayPoints.push_back(midPose4);
+
+    // Give targetPose
+    pickWayPoints.push_back(targetPose);
+
+    return pickWayPoints;
+
+}
+
+//放置插值函数
+std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose)
+{
+    //从放置位置前往抓取位置
+    //插值后路径为＂|----＂形（先抬升，后平移）
+    std::vector<geometry_msgs::Pose> placeWayPoints;
+    geometry_msgs::Pose midPose1;
+    geometry_msgs::Pose midPose2;
+    geometry_msgs::Pose midPose3;
+    geometry_msgs::Pose midPose4;
+
+    geometry_msgs::Point startPoint;
+    geometry_msgs::Point targetPoint;
+    geometry_msgs::Point midPoint;
+
+    startPoint = startPose.position;
+    targetPoint = targetPose.position;
+
+    // midPose1
+    midPoint.x = startPoint.x;
+    midPoint.y = startPoint.y;
+    midPoint.z = targetPoint.z;
+
+    midPose1.position = midPoint;
+    midPose1.orientation = targetPose.orientation;
+
+    placeWayPoints.push_back(midPose1);
+
+    // midPose2
+    midPoint.x = startPoint.x + 0.25 * (targetPoint.x - startPoint.x);
+    midPoint.y = startPoint.y + 0.25 * (targetPoint.y - startPoint.y);
+    midPoint.z = targetPoint.z;
+
+    midPose2.position = midPoint;
+    midPose2.orientation = targetPose.orientation;
+
+    placeWayPoints.push_back(midPose2);
+
+    // midPose3
+    midPoint.x = startPoint.x + 0.5 * (targetPoint.x - startPoint.x);
+    midPoint.y = startPoint.y + 0.5 * (targetPoint.y - startPoint.y);
+    midPoint.z = targetPoint.z;
+
+    midPose3.position = midPoint;
+    midPose3.orientation = targetPose.orientation;
+
+    placeWayPoints.push_back(midPose3);
+
+    // midPose4
+    midPoint.x = startPoint.x + 0.75 * (targetPoint.x - startPoint.x);
+    midPoint.y = startPoint.y + 0.75 * (targetPoint.y - startPoint.y);
+    midPoint.z = targetPoint.z;
+
+    midPose4.position = midPoint;
+    midPose4.orientation = targetPose.orientation;
+
+    placeWayPoints.push_back(midPose4);
+
+    // Give targetPose
+    placeWayPoints.push_back(targetPose);
+
+    return placeWayPoints;
 }
