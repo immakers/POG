@@ -229,6 +229,9 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     point.y = curTargetPoint.y;
     point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
 
+    moveit::planning_interface::MoveGroup::Plan pick_plan;
+    moveit::planning_interface::MoveGroup::Plan place_plan;
+
     orientation.x = 0;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     orientation.y = 0;
     orientation.z = -0.707;
@@ -258,6 +261,9 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
                                    0.0,   // jump_threshold
                                    trajectory1);
 
+    pick_plan.trajectory_ = trajectory1;
+    arm_group.execute(pick_plan);
+
     double tPlan1 = arm_group.getPlanningTime();
     ROS_INFO("Planning time is [%lf]s.", tPlan1);
     ROS_INFO("Go to the goal and prepare for picking .");
@@ -276,6 +282,8 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
                                                  0.01,  // eef_step
                                                  0.0,   // jump_threshold
                                                  trajectory2);
+    place_plan.trajectory_ = trajectory2;
+    arm_group.execute(pick_plan);
 
     double tPlan2 = arm_group.getPlanningTime();
     ROS_INFO("Planning time is [%lf]s.", tPlan2);
