@@ -52,10 +52,13 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
 //机械臂运动控制函数
-void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint);
-//插值函数
-
-
+void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint);
+//抓取插值函数
+std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,
+                                                                                                          geometry_msgs::Pose targetPose);
+//放置插值函数
+std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
+                                                                                                            geometry_msgs::Pose targetPose);
 
 int main(int argc, char **argv)
 {
@@ -116,7 +119,7 @@ int main(int argc, char **argv)
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
-                cutAndGo(curTargetPoint);
+                                pickAndPlace(curTargetPoint);
 
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
@@ -205,7 +208,7 @@ bool fingerControl(double finger_turn)
     }
 }
 
-void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint)
+void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 {
 //流程介绍
 //1--获得目标点并对路径进行插值
@@ -231,9 +234,6 @@ void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint)
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
 
-    //路径插值
-    std::vector<geometry_msgs::Pose> waypoints;
-
     //获取当前位姿
     arm_group.setStartState(*arm_group.getCurrentState());
     geometry_msgs::PoseStamped msg;
@@ -243,43 +243,51 @@ void cutAndGo(kinova_arm_moveit_demo::targetState curTargetPoint)
     current_pose = msg.pose;
 
     geometry_msgs::Point position = current_pose.position;
-    int i = 0;
 
+    //抓取插值
+    std::vector<geometry_msgs::Pose> pickWayPoints;
+    pickWayPoints = pickInterpolate(current_pose, targetPose);
 
     //前往抓取点
-    arm_group.setPoseTarget(targetPose);
-    bool success = arm_group.move();
+    moveit_msgs::RobotTrajectory trajectory1;
+    arm_group.computeCartesianPath(pickWayPoints,
+                                                 0.01,  // eef_step
+                                                 0.0,   // jump_threshold
+                                                 trajectory1);
 
-    double tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go to the goal and prepare for picking . %s",success?"":"FAILED");
+    double tPlan1 = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan1);
+    ROS_INFO("Go to the goal and prepare for picking .");
     //抓取动作－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
     //抓取完毕
 
-    //带着抓取物体回到起始位置
-    arm_group.setPoseTarget(startPose);
-    success = arm_group.move();
+    //放置插值
+    std::vector<geometry_msgs::Pose> placeWayPoints;
+    placeWayPoints = placeInterpolate(targetPose, placePose);
 
-    tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go to the start position with the goal. %s",success?"":"FAILED");
+    //前往放置点
+    moveit_msgs::RobotTrajectory trajectory2;
+    arm_group.computeCartesianPath(placeWayPoints,
+                                                 0.01,  // eef_step
+                                                 0.0,   // jump_threshold
+                                                 trajectory2);
 
-    //带着抓取物体去放置位置
-    arm_group.setPoseTarget(placePose);
-    success = arm_group.move();
-
-    tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go to the placing position and prepare for placing. %s",success?"":"FAILED");
+    double tPlan2 = arm_group.getPlanningTime();
+    ROS_INFO("Planning time is [%lf]s.", tPlan2);
+    ROS_INFO("Go to the goal and prepare for placing . ");
 
     //松开爪子－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－杨一帆
     //松开完毕
 
-    //回到初始位置
-    arm_group.setPoseTarget(startPose);
-    success = arm_group.move();
+}
+std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,
+                                                                                                          geometry_msgs::Pose targetPose)
+{
 
-    tPlan = arm_group.getPlanningTime();
-    ROS_INFO("Planning time is [%lf]s.", tPlan);
-    ROS_INFO("Go back the start position. %s",success?"":"FAILED");
+}
+//放置插值函数
+std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
+                                                                                                            geometry_msgs::Pose targetPose)
+{
+
 }
