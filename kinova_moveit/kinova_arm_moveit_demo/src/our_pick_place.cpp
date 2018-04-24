@@ -46,7 +46,7 @@ Finger_actionlibClient client(Finger_action_address, true);
 bool getTags(vector<int>& targetsTag);
 //接收到detect_result消息的回调函数，将消息内容赋值到全局变量targets里面
 void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg);
-//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完返回3
+//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完或者一个目标物都没有返回3
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint);
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
@@ -77,9 +77,9 @@ int main(int argc, char **argv)
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
 	moveit_msgs::DisplayTrajectory display_trajectory;
         
-        ROS_INFO("Waiting for action server to start.");
-        client.waitForServer();
-        ROS_INFO("Action server started, waiting for goal.");
+    ROS_INFO("Waiting for action server to start.");
+    client.waitForServer();
+    ROS_INFO("Action server started, waiting for goal.");
 	//发布消息和订阅消息
 	ros::Publisher detectTarget_pub = node_handle.advertise<std_msgs::Int8>("dectet_target", 10);  //让visual_detect节点检测目标
 	ros::Subscriber detectResult_sub = node_handle.subscribe("detect_result", 10, detectResultCB);				//接收visual_detect检测结果
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 	/*************************************/
 	vector<int> targetsTag;		//需要抓取的目标物的标签
 	int cur_target=0;					//当前抓取目标的序号
-  if(!getTags(targetsTag))	//如果标签输入为0则程序直接退出
+  	if(!getTags(targetsTag))	//如果标签输入为0则程序直接退出
 	{
 		detectTarget.data=2;		//让visual_detect节点退出
 		detectTarget_pub.publish(detectTarget);
@@ -112,12 +112,12 @@ int main(int argc, char **argv)
     //等待目标传入并执行
 	while(ros::ok())
 	{
-		if(getTargets==1)
+		if(getTargets==1)	//收到视觉检测结果
 		{
 			//判断当前抓取目标是否存在
 			kinova_arm_moveit_demo::targetState curTargetPoint;    //当前抓取点的xyz,后续考虑加姿态
 			int goalState=haveGoal(targetsTag,cur_target,curTargetPoint);
-			if(goalState==1 && n<n_MAX)		//当前如果目标存在且抓取次数未达上限
+			if(goalState==1 && n<n_MAX)		//如果当前目标存在且抓取次数未达上限
 			{
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
-				detectTarget.data=1;		//让visual_detect节点退出
+				detectTarget.data=1;		//让visual_detect节点进行视觉检测
 				detectTarget_pub.publish(detectTarget);
 			}
 			else if(goalState==2)			//当前目标不存在但还有需要抓取的目标
@@ -175,11 +175,23 @@ void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg)
 	getTargets=1;	//接收到视觉定位结果getTargets置1
 }
 
-//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完返回3
+//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完或者一个目标物都没有返回3
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint)
 {
-
-	return true;
+	int num=targets.size();		//检测到的物品的个数
+	if(cur_target>=targetsTag.size() || num==0 )		//全部抓完或者一个目标物都没有返回3
+	{
+		return 3;
+	}
+	for(int i=0;i<num;i++)
+	{
+		if(targets[i].tag==targetsTag[cur_target])
+		{
+			curTargetPoint=targets[i];		//获取当前抓取物品的位置
+			return 1;
+		}
+	}
+	return 2;
 }
 
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合 added by yang 20180418
