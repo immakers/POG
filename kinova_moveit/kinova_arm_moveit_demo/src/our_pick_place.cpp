@@ -34,11 +34,11 @@ vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
 
 //定义机器人类型，手指控制 added by yang 20180418
-std::string kinova_robot_type = "j2s7s300";
-std::string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action/finger_positions";    //手指控制服务器的名称
+string kinova_robot_type = "j2s7s300";
+string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action/finger_positions";    //手指控制服务器的名称
 
 //定义手指控制client added by yang 20180418
-Finger_actionlibClient client(Finger_action_address, true);
+//Finger_actionlibClient client(Finger_action_address, true);
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 bool getTags(vector<int>& targetsTag);
@@ -70,9 +70,9 @@ int main(int argc, char **argv)
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
 	moveit_msgs::DisplayTrajectory display_trajectory;
         
-        ROS_INFO("Waiting for action server to start.");
-        client.waitForServer();
-        ROS_INFO("Action server started, waiting for goal.");
+//        ROS_INFO("Waiting for action server to start.");
+//        client.waitForServer();
+//        ROS_INFO("Action server started, waiting for goal.");
 	//发布消息和订阅消息
 	ros::Publisher detectTarget_pub = node_handle.advertise<std_msgs::Int8>("dectet_target", 10);  //让visual_detect节点检测目标
 	ros::Subscriber detectResult_sub = node_handle.subscribe("detect_result", 10, detectResultCB);				//接收visual_detect检测结果
@@ -171,6 +171,10 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合 added by yang 20180418
 bool fingerControl(double finger_turn)
 {
+    Finger_actionlibClient client(Finger_action_address, true);
+    ROS_INFO("Waiting for action server to start.");
+    client.waitForServer();
+    ROS_INFO("Action server started, waiting for goal.");
     if (finger_turn < 0)
     {
         finger_turn = 0.0;

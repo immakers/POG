@@ -91,7 +91,7 @@ For this however, set use_trajectory_controller = false as explained above.
 First launch Gazebo - 
 
 ```
-roslaunch kinova_gazebo robot_launch.launch kinova_robotType:=j2n6s300
+roslaunch kinova_gazebo robot_launch.launch 
 ```
 
 Next launch moveIt and RViz -
