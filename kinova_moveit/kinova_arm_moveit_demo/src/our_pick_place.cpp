@@ -35,7 +35,7 @@ const int n_MAX=10;			//同一物品最大抓取次数
 vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
 geometry_msgs::Pose placePose;	//机械臂抓取放置位置,为规划方便，将放置位置设为起始位置
-moveit::planning_interface::MoveGroup arm_group("arm");//改为全局变量，方便机械臂运动规划的使用
+//moveit::planning_interface::MoveGroup arm_group("arm");//改为全局变量，方便机械臂运动规划的使用
 vector<int> targetsTag;		//需要抓取的目标物的标签
 bool getTargetsTag=0;	//当接收到需要抓取的目标物的标签时置1，等待结束后置0
 
@@ -57,7 +57,8 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
 //机械臂运动控制函数
-void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint);
+void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
+                  moveit::planning_interface::MoveGroup arm_group);
 //抓取插值函数
 std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose);
 //放置插值函数
@@ -78,6 +79,7 @@ int main(int argc, char **argv)
 	//ros::Duration(10.0).sleep();
 	
 	moveit::planning_interface::MoveGroup arm_group("arm");
+	ROS_INFO("test.");
 	arm_group.setEndEffectorLink( "j2s7s300_end_effector");
 	moveit::planning_interface::MoveGroup finger_group("gripper");
 
@@ -150,7 +152,7 @@ int main(int argc, char **argv)
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
-                pickAndPlace(curTargetPoint);
+                pickAndPlace(curTargetPoint,arm_group);
 
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
@@ -279,7 +281,8 @@ bool fingerControl(double finger_turn)
     }
 }
 
-void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
+void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
+                  moveit::planning_interface::MoveGroup arm_group)
 {
 //流程介绍
 //1--获得目标点并对路径进行插值
@@ -289,6 +292,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 //5--执行插值后的路径
 //6--放置物体
 //7--等待下一个目标点
+    
     geometry_msgs::Pose targetPose;	//定义抓取位姿
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
