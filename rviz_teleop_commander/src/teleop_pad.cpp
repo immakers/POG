@@ -44,7 +44,6 @@ TeleopPanel::TeleopPanel( QWidget* parent )
   topic_layout->addWidget( grabTimesShow );
 
 
-
   QHBoxLayout* layout = new QHBoxLayout;
   layout->addLayout( topic_layout );
   setLayout( layout );
