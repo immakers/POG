@@ -44,9 +44,6 @@ string kinova_robot_type = "j2s7s300";
 string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action/finger_positions";    //手指控制服务器的名称
 
 //定义手指控制client added by yang 20180418
-
-//Finger_actionlibClient client(Finger_action_address, true);
-
 Finger_actionlibClient* client=NULL;
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
@@ -72,17 +69,14 @@ int main(int argc, char **argv)
 	/*************************************/
 	/********初始化设置*******************/
 	/*************************************/
-	ROS_INFO("test.");
 	ros::init(argc, argv, "our_pick_place");
 	ros::NodeHandle node_handle;  
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
-	ROS_INFO("test.");
 	//等待rviz启动，最后集成用一个launch文件启动时需要
 	//ros::Duration(10.0).sleep();
 	
 	moveit::planning_interface::MoveGroup arm_group("arm");
-	ROS_INFO("test.");
 	arm_group.setEndEffectorLink( "j2s7s300_end_effector");
 	moveit::planning_interface::MoveGroup finger_group("gripper");
 
@@ -91,16 +85,14 @@ int main(int argc, char **argv)
 	//实物控制的话，可删掉这两句－－删掉是为了减少Rviz的使用所占用的时间
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
 	moveit_msgs::DisplayTrajectory display_trajectory;
-        
 
-//        ROS_INFO("Waiting for action server to start.");
-//        client.waitForServer();
-//        ROS_INFO("Action server started, waiting for goal.");
-
-    ROS_INFO("Waiting for action server to start.");
-    client->waitForServer();
-    ROS_INFO("Action server started, waiting for goal.");
-
+    //仿真连不上，程序无法继续执行，先注释掉
+/*
+    while(ros::ok() && !client->waitForServer(ros::Duration(5.0)))
+	{
+     ROS_INFO("Waiting for the finger action server to come up");
+  	}
+*/
 	//发布消息和订阅消息
 	ros::Publisher detectTarget_pub = node_handle.advertise<std_msgs::Int8>("dectet_target", 10);  //让visual_detect节点检测目标
 	ros::Publisher grab_result_pub = node_handle.advertise<rviz_teleop_commander::grab_result>("grab_result", 1);  //发布抓取状态
@@ -117,6 +109,7 @@ int main(int argc, char **argv)
 	/********目标输入*********************/
 	/*************************************/
 	int cur_target=0;					//当前抓取目标的序号
+    ROS_INFO("waiting for tags of targets input in GUI");
     while(getTargetsTag!=1)				//等待抓取目标输入
 	{
 		ros::Duration(0.5).sleep();
@@ -232,9 +225,9 @@ void tagsCB(const rviz_teleop_commander::targets_tag &msg)
 	int num=msg.targetsTag.size();
     targetsTag.clear();
   	targetsTag.resize(num);
-	int i=0;
-	ROS_INFO("tags of targets :");
-	for(;i<num;i++);
+	//int i=0;
+	ROS_INFO("tags of targets[%d] :",num);
+	for(int i=0; i<num; i++)
 	{
 		targetsTag[i]=msg.targetsTag[i];
 		ROS_INFO(" [%d]", targetsTag[i]);
