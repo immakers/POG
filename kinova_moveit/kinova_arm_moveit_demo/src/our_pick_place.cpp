@@ -40,10 +40,13 @@ vector<int> targetsTag;		//需要抓取的目标物的标签
 bool getTargetsTag=0;	//当接收到需要抓取的目标物的标签时置1，等待结束后置0
 
 //定义机器人类型，手指控制 added by yang 20180418
-std::string kinova_robot_type = "j2s7s300";
-std::string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action/finger_positions";    //手指控制服务器的名称
+string kinova_robot_type = "j2s7s300";
+string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action/finger_positions";    //手指控制服务器的名称
 
 //定义手指控制client added by yang 20180418
+
+//Finger_actionlibClient client(Finger_action_address, true);
+
 Finger_actionlibClient* client=NULL;
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
@@ -89,9 +92,15 @@ int main(int argc, char **argv)
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
 	moveit_msgs::DisplayTrajectory display_trajectory;
         
+
+//        ROS_INFO("Waiting for action server to start.");
+//        client.waitForServer();
+//        ROS_INFO("Action server started, waiting for goal.");
+
     ROS_INFO("Waiting for action server to start.");
     client->waitForServer();
     ROS_INFO("Action server started, waiting for goal.");
+
 	//发布消息和订阅消息
 	ros::Publisher detectTarget_pub = node_handle.advertise<std_msgs::Int8>("dectet_target", 10);  //让visual_detect节点检测目标
 	ros::Publisher grab_result_pub = node_handle.advertise<rviz_teleop_commander::grab_result>("grab_result", 1);  //发布抓取状态
