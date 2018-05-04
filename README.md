@@ -1,3 +1,19 @@
+## 团队日志
+
+2018/4/21(Petori)
+- 本日改动内容总结如下:
+- 删除了"初始位置"的定义，仅定义"放置位置"．运动策略变为－－－机械臂在＂目标位置－放置位置＂间来回运动．
+- 修改运动控制函数名为`pickAndPlace`，并对函数内容进行修改
+- 增加了两个路径插值函数`pickInterpolation`和`placeInterpolation`
+- 在108-110行增加了在获取目标之前，使机械臂运动到"放置位置"的代码
+- 补充进手爪控制
+
+2018/4/20（Petori)
+- 把机械臂控制部分改写成函数，并使编译通过
+- 把`moveit::planning_interface::MoveGroup arm_group("arm")`改为全局变量，方便运动规划调用
+- 已找到路径点设置函数，准备明日补充路径插值部分，并补完机械臂运动控制部分
+
+
 ## 必看！！！
 - 关于github团队操作以当前repository（POG）master分支下的｀Github团队合作教程.pdf｀为准！
 
@@ -13,6 +29,3 @@
 - git fetch upstream
 - git merge upstream/master
 
-
-## 代码维护分工
-- Petori `\kinova_moveit`
