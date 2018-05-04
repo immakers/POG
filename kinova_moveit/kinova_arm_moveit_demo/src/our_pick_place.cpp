@@ -63,6 +63,8 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
 std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose);
 //放置插值函数
 std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose);
+//设置机械臂放置位置,经多次测试，发现必须用函数设置初始位置．
+void setPlacePose();
 
 int main(int argc, char **argv)
 {
@@ -135,6 +137,7 @@ int main(int argc, char **argv)
 	/********目标抓取*********************/
 	/*************************************/
     // 先前往放置位置
+    setPlacePose();
     arm_group.setPoseTarget(placePose);
     arm_group.move();
     ROS_INFO("All ready, waiting for goal.");
@@ -497,3 +500,14 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
 
     return placeWayPoints;
 }
+void setPlacePose()
+{
+placePose.position.x = 0.27;
+placePose.position.y = 0.55;
+placePose.position.z = 0.2;
+placePose.orientation.x = 1;
+placePose.orientation.y = 0;
+placePose.orientation.z = 0;
+placePose.orientation.w = 0;
+}
+
