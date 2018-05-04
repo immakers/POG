@@ -34,15 +34,18 @@ TeleopPanel::TeleopPanel( QWidget* parent )
   
   //创建当前抓取目标物标签显示框
   topic_layout->addWidget( new QLabel( "garb target:" ));
-  grabTagShow = new QTextBrowser;
+  grabTagShow = new QLineEdit;
   topic_layout->addWidget( grabTagShow );
   //grabTagShow->setText("yi");
   
-  //创建当前抓取目标物标签显示框
+  //创建当前抓取目标物次数显示框
   topic_layout->addWidget( new QLabel( "garb times:" ));
-  grabTimesShow = new QTextBrowser;
+  grabTimesShow = new QLineEdit;
   topic_layout->addWidget( grabTimesShow );
 
+  //show=new QLineEdit;
+  //topic_layout->addWidget( show );
+  //show->setText("yi");
 
   QHBoxLayout* layout = new QHBoxLayout;
   layout->addLayout( topic_layout );

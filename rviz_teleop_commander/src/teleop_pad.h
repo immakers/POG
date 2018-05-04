@@ -62,8 +62,9 @@ protected:
   QPushButton* start_push_button;
 
   //输出显示框
-  QTextBrowser* grabTagShow;	//当前抓取的目标标签
-  QTextBrowser* grabTimesShow;	//当前目标标签的抓取次数
+  QLineEdit* grabTagShow;	//当前抓取的目标标签
+  QLineEdit* grabTimesShow;	//当前目标标签的抓取次数
+  //QLineEdit* show;
 
   // ROS的publisher，用来发布要抓取的目标物的标签
   ros::Publisher tags_publisher_;
