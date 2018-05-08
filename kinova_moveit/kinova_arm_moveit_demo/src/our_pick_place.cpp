@@ -317,9 +317,6 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
 
-    //获取当前位姿
-    arm_group.setStartState(*arm_group.getCurrentState());
-
     //抓取插值
     std::vector<geometry_msgs::Pose> pickWayPoints;
     pickWayPoints = pickInterpolate(placePose, targetPose);
@@ -339,10 +336,9 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     ROS_INFO("Go to the goal and prepare for picking .");
 
     //抓取动作
-    fingerControl(0);
+    fingerControl(0.1);
     //抓取完毕
 
-    arm_group.setStartState(*arm_group.getCurrentState());
     //放置插值
     std::vector<geometry_msgs::Pose> placeWayPoints;
     placeWayPoints = placeInterpolate(targetPose, placePose);
@@ -361,7 +357,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     ROS_INFO("Go to the goal and prepare for placing . ");
 
     //松开爪子
-    fingerControl(1);
+    fingerControl(0.9);
     //松开完毕
 
 }
