@@ -1,4 +1,9 @@
 ## 团队日志
+2018/5/8(Petori)
+- rostopic发话题测试通过
+- 尚存问题： Trajectory message contains waypoints that are not strictly increasing in time.
+- 另外：gazebo中模型抖动严重，但不影响规划；机械臂规划和运动速度太慢；
+
 2018/5/4(Petori)
 - 设置初始放置位置
 - 运动规划结果良好
