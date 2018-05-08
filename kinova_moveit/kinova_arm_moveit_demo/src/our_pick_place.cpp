@@ -319,13 +319,6 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
 
     //获取当前位姿
     arm_group.setStartState(*arm_group.getCurrentState());
-    geometry_msgs::PoseStamped msg;
-    msg = arm_group.getCurrentPose();
-
-    geometry_msgs::Pose current_pose;
-    current_pose = msg.pose;
-
-    geometry_msgs::Point position = current_pose.position;
 
     //抓取插值
     std::vector<geometry_msgs::Pose> pickWayPoints;
@@ -349,7 +342,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     fingerControl(0);
     //抓取完毕
 
-    //arm_group.setStartState(*arm_group.getCurrentState());
+    arm_group.setStartState(*arm_group.getCurrentState());
     //放置插值
     std::vector<geometry_msgs::Pose> placeWayPoints;
     placeWayPoints = placeInterpolate(targetPose, placePose);
