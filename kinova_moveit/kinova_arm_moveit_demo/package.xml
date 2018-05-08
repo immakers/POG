@@ -19,6 +19,8 @@
   <build_depend>geometric_shapes</build_depend>
   <build_depend>kinova_driver</build_depend>
   <build_depend>message_generation</build_depend>  <!--qcrong 20180416-->
+  <build_depend>visp_ros</build_depend>
+  <build_depend>OpenCV</build_depend>
 
   <run_depend>pluginlib</run_depend>
   <run_depend>moveit_core</run_depend>
@@ -31,5 +33,7 @@
   <run_depend>pr2_moveit_plugins</run_depend>
   <run_depend>kinova_driver</run_depend>
   <run_depend>message_runtime</run_depend>	<!--qcrong 20180416-->
+  <run_depend>OpenCV</run_depend>
+  <run_depend>VISP</run_depend>
 
 </package>

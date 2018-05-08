@@ -17,11 +17,13 @@ find_package(catkin REQUIRED
              rospy
              std_msgs
              message_generation
+             visp_ros
 )
 
 find_package(Boost REQUIRED system filesystem date_time thread)
 find_package(Eigen REQUIRED)
-
+find_package(VISP REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(kinova_driver REQUIRED)
 
 #######################################
@@ -31,6 +33,7 @@ add_message_files(
 	FILES
 	targetState.msg
 	targetsVector.msg
+        toolposeChange.msg
 )
 
 generate_messages(
@@ -55,6 +58,8 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${VISP_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 include_directories(SYSTEM ${Boost_INCLUDE_DIR} ${EIGEN_INCLUDE_DIRS})
@@ -89,6 +94,12 @@ install(TARGETS eye2hand_calib_control DESTINATION ${CATKIN_PACKAGE_BIN_DESTINAT
 add_executable(our_pick_place src/our_pick_place.cpp)
 target_link_libraries(our_pick_place ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS our_pick_place DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+## end
+
+## added by qcrong in 2018/5/8
+add_executable(eye_to_hand_calculate src/eye_to_hand_calculate.cpp include/handeye.h include/quaternion.h)
+target_link_libraries(eye_to_hand_calculate ${catkin_LIBRARIES} ${VISP_LIBRARIES} ${OpenCV_LIBS})
+install(TARGETS eye_to_hand_calculate DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 ## end
 
 add_executable(work_scene src/work_scene.cpp)
