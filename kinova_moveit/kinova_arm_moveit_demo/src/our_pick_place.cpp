@@ -96,7 +96,7 @@ int main(int argc, char **argv)
   	}
 */
 	//发布消息和订阅消息
-	ros::Publisher detectTarget_pub = node_handle.advertise<std_msgs::Int8>("dectet_target", 10);  //让visual_detect节点检测目标
+	ros::Publisher detectTarget_pub = node_handle.advertise<std_msgs::Int8>("detect_target", 10);  //让visual_detect节点检测目标
 	ros::Publisher grab_result_pub = node_handle.advertise<rviz_teleop_commander::grab_result>("grab_result", 1);  //发布抓取状态
 
 	ros::Subscriber detectResult_sub = node_handle.subscribe("detect_result", 10, detectResultCB);				//接收visual_detect检测结果
@@ -309,10 +309,10 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     moveit::planning_interface::MoveGroup::Plan pick_plan;
     moveit::planning_interface::MoveGroup::Plan place_plan;
 
-    orientation.x = 0;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
+    orientation.x = 1;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     orientation.y = 0;
-    orientation.z = -0.707;
-    orientation.w = 0.707;
+    orientation.z = 0;
+    orientation.w = 0;
 
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
@@ -329,7 +329,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
 
     //抓取插值
     std::vector<geometry_msgs::Pose> pickWayPoints;
-    pickWayPoints = pickInterpolate(current_pose, targetPose);
+    pickWayPoints = pickInterpolate(placePose, targetPose);
 
     //前往抓取点
     moveit_msgs::RobotTrajectory trajectory1;
@@ -349,6 +349,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     fingerControl(0);
     //抓取完毕
 
+    //arm_group.setStartState(*arm_group.getCurrentState());
     //放置插值
     std::vector<geometry_msgs::Pose> placeWayPoints;
     placeWayPoints = placeInterpolate(targetPose, placePose);
@@ -356,11 +357,11 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     //前往放置点
     moveit_msgs::RobotTrajectory trajectory2;
     arm_group.computeCartesianPath(placeWayPoints,
-                                                 0.01,  // eef_step
-                                                 0.0,   // jump_threshold
-                                                 trajectory2);
+                                   0.01,  // eef_step
+                                   0.0,   // jump_threshold
+                                   trajectory2);
     place_plan.trajectory_ = trajectory2;
-    arm_group.execute(pick_plan);
+    arm_group.execute(place_plan);
 
     double tPlan2 = arm_group.getPlanningTime();
     ROS_INFO("Planning time is [%lf]s.", tPlan2);
@@ -423,7 +424,7 @@ std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,g
     // midPose4
     midPoint.x = targetPoint.x;
     midPoint.y = targetPoint.y;
-    midPoint.z = startPoint.z;
+    midPoint.z = targetPoint.z;
 
     midPose4.position = midPoint;
     midPose4.orientation = targetPose.orientation;
