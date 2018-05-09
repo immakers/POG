@@ -23,7 +23,7 @@
 
   <!-- Load the URDF into the ROS Parameter Server -->
   <param name="robot_description"
-    command="$(find xacro)/xacro --inorder '$(find table_basket)/urdf/table_kinova.urdf.xacro'" />
+    command="$(find xacro)/xacro --inorder '$(find kinova_description)/urdf/j2s7s300_standalone.xacro'" />
 
   <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"

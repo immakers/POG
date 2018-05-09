@@ -13,22 +13,18 @@
 #include <vector>
 #include <Eigen/Eigen>
 
+#include <std_msgs/Int8.h>
+#include "kinova_arm_moveit_demo/toolposeChange.h"
+
+#define TF_EULER_DEFAULT_ZYX
+
 using namespace std;
 using namespace Eigen;
 
-const double FINGER_MAX = 6400;
-actionlib::SimpleActionClient<kinova_msgs::SetFingersPositionAction>* finger_client_=NULL;
+const float deg2rad = M_PI / 180.0;//用于将角度转化为弧度。rad = deg*deg2rad
+const float rad2deg = 180.0 / M_PI;//用于将弧度转化为角度。deg = rad*rad2deg
 moveit::planning_interface::MoveGroup* gripper_group_=NULL;
-
 geometry_msgs::Pose target_pose1;
-bool flag = true;//　用于判断是否有需要执行的位姿信息
-int grip = 0; // 用于给出手爪的执行动作，０抓紧，１不动作，２松开，３不动作
-
-void chatterCallback(const geometry_msgs::Pose& pose1)
-{
-  target_pose1 = pose1;
-  flag = false;
-}
 
 //获取当前位姿
 geometry_msgs::Pose get_current_pose(moveit::planning_interface::MoveGroup &group)
@@ -43,6 +39,37 @@ geometry_msgs::Pose get_current_pose(moveit::planning_interface::MoveGroup &grou
 	ROS_INFO("Current orientation :\n x[%f], y[%f], z[%f], w[%f]", current_pose.orientation.x, current_pose.orientation.y,
 																															 current_pose.orientation.z, current_pose.orientation.w);
   return current_pose;
+}
+
+//当前位姿geometry_msgs::Pose转为MatrixXd齐次变换矩阵的格式
+MatrixXd pose2matrix(const geometry_msgs::Pose &pose_)
+{
+  VectorXd pose_t= MatrixXd::Zero(3, 1);		//位置向量
+	Matrix3d pose_r;	//旋转矩阵
+  //四元数转旋转矩阵
+	Quaterniond pose_r_q(pose_.orientation.w,
+											 pose_.orientation.x,
+											 pose_.orientation.y,
+											 pose_.orientation.z);
+	pose_r=pose_r_q.matrix();
+  //当前位姿的位置向量
+	pose_t<<pose_.position.x, pose_.position.y, pose_.position.z;
+  //转换为4X4矩阵
+  MatrixXd pose_m = MatrixXd::Zero(4, 4);
+  for(int j=0; j<3; j++)
+  {
+    for(int k=0; k<3; k++)	
+	  {
+	    pose_m(j,k)=pose_r(j,k);
+	  }		
+  }
+	for(int j=0; j<3; j++)
+	{
+	  pose_m(j,3)=pose_t(j);
+	}
+	pose_m(3,3)=1.0;
+
+  return pose_m;
 }
 
 //获取old位姿坐标系下，从old到new的位置和姿态增量
@@ -66,7 +93,7 @@ MatrixXd getPoseIncreasement(const geometry_msgs::Pose &current_pose, const geom
 													old_pose.orientation.y,
 													old_pose.orientation.z);
 	poseOld_r=poseOld_r_q.matrix();
-	//当前位姿的位置向量
+	//之前位姿的位置向量
 	poseOld_t<<old_pose.position.x, old_pose.position.y, old_pose.position.z;
 
 	//位姿增量计算
@@ -95,50 +122,27 @@ MatrixXd getPoseIncreasement(const geometry_msgs::Pose &current_pose, const geom
   return old_new;
 }
 
-//手指抓取
-bool gripper_action(double finger_turn)
+//ZYX欧拉角(角度)转四元数
+Quaterniond  Euler_to_Quaterniond(double yaw, double pitching, double droll)
 {
-		/*
-    if(robot_connected_ == false)
-    {
-        if (finger_turn>0.5*FINGER_MAX)
-        {
-          gripper_group_->setNamedTarget("Close");
-        }
-        else
-        {
-          gripper_group_->setNamedTarget("Open");
-        }
-        gripper_group_->move();
-        return true;
-    }*/
+	//角度转弧度
+	yaw=yaw*deg2rad;
+  pitching=pitching*deg2rad;
+  droll=droll*deg2rad;
 
-    if (finger_turn < 0)
-    {
-        finger_turn = 0.0;
-    }
-    else
-    {
-        finger_turn = std::min(finger_turn, FINGER_MAX);
-    }
+  Vector3d ea0(yaw, pitching, droll);
+  Matrix3d R;
+  R = AngleAxisd(ea0[0], Vector3d::UnitZ())
+      * AngleAxisd(ea0[1], Vector3d::UnitY())
+      * AngleAxisd(ea0[2], Vector3d::UnitX());
 
-    kinova_msgs::SetFingersPositionGoal goal;
-    goal.fingers.finger1 = finger_turn;
-    goal.fingers.finger2 = goal.fingers.finger1;
-    goal.fingers.finger3 = goal.fingers.finger1;
-    finger_client_->sendGoal(goal);
+  //cout << R << endl << endl;  
 
-    if (finger_client_->waitForResult(ros::Duration(5.0)))
-    {
-        finger_client_->getResult();
-        return true;
-    }
-    else
-    {
-        finger_client_->cancelAllGoals();
-        ROS_WARN_STREAM("The gripper action timed-out");
-        return false;
-    }
+  //RotationMatrix to Quaterniond  
+  Quaterniond q;
+  q = R;
+  cout << "x:" << q.x() << "\t" << "y:" << q.y() << "\t" << "z:" << q.z() << "\t" << "w:" << q.w() << endl;
+  return q;
 }
 
 
@@ -151,45 +155,63 @@ int main(int argc, char **argv)
 
   moveit::planning_interface::MoveGroup group("arm");		//这句话的作用？
 	gripper_group_ = new moveit::planning_interface::MoveGroup("gripper");
-
-  //　实物控制的话，得删掉这两句－－删掉是为了减少Rviz的使用所占用的时间
-  ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
-  moveit_msgs::DisplayTrajectory display_trajectory;
-
-  ros::Subscriber sub = node_handle.subscribe("hub", 10, chatterCallback);
-  sleep(1.0);
-  
   // Add by Petori in 2018/4/8
   group.setEndEffectorLink( "j2s7s300_end_effector");	//这句话的作用？
 
-	//抓紧手指
-/*
-	finger_client_ = new actionlib::SimpleActionClient<kinova_msgs::SetFingersPositionAction>
-            ("/j2s7s300_driver/fingers_action/finger_positions", false);
-  while(ros::ok() && !finger_client_->waitForServer(ros::Duration(5.0)))
-	{
-     ROS_INFO("Waiting for the finger action server to come up");
-  }
-*/
+  //　实物控制的话，得删掉这两句－－删掉是为了减少Rviz的使用所占用的时间
+  //ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
+  //moveit_msgs::DisplayTrajectory display_trajectory;
+  
+
+  //发布的消息
+  ros::Publisher signal_pub = node_handle.advertise<std_msgs::Int8>("hand_eye_arm_signal", 1);  //到达位姿后，发送标志位
+	ros::Publisher pose_change_pub = node_handle.advertise<kinova_arm_moveit_demo::toolposeChange>("hand_eye_arm_pose_change", 10);//发送末端位姿变化
+	ros::Publisher pose_pub = node_handle.advertise<kinova_arm_moveit_demo::toolposeChange>("hand_eye_arm_pose", 10);//发送末端位姿齐次变换矩阵
+
 	sleep(3.0);
-//	gripper_action(3200.0);
+  //抓紧手指
 	gripper_group_->setNamedTarget("Close");
 	gripper_group_->move();
 	sleep(3.0);
 
-	//位置0 初始位置
+
+  std_msgs::Int8 flag;	//到达位姿后，发送标志位
+  flag.data=1;
+  Quaterniond quater;
+  tf::Quaternion quaternion;        //相对于基座的旋转角
+  tf::Quaternion quaternion_add;		//相对于当前末端的旋转角增量
+  vector<tfScalar> rpy(3);   //设置相对于基座标的旋转，采用ZYX固定轴角的方式
+  vector<double> zyx(3);     //相对于基座的位移
+	/**************************************************************************************************************************/
+	/****************************************************位姿0*****************************************************************/
+	/**************************************************************************************************************************/
 	ROS_INFO("STATE 0");
 	tf::Pose random_pose;
-  random_pose.setOrigin(tf::Vector3(0.54882, -0.30854,  0.65841));
-  random_pose.setRotation(tf::Quaternion(0.68463, -0.22436, 0.68808, 0.086576));
+  zyx[0]=0.3;
+  zyx[1]=-0.25;
+  zyx[2]=0.55;
+  random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
+  //quater=Euler_to_Quaterniond(90,0,-90);
+  //random_pose.setRotation(tf::Quaternion(quater.x(), quater.y(), quater.z(), quater.w()));
+  rpy[0]=-95*deg2rad;
+  rpy[1]=-70*deg2rad;
+  rpy[2]=-100*deg2rad;
+  quaternion.setRPY(rpy[0], rpy[1], rpy[2]);   //设置初始值
+  quaternion_add.setRPY(0,0,10*deg2rad);     //设置增量大小
+  quaternion*=quaternion_add;
+  random_pose.setRotation(quaternion);
 
   geometry_msgs::Pose target_pose;
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
 	int k=0;
-	while(ros::ok() && k<5)
+	while(k<5)
 	{
+      if(!ros::ok())
+      {
+         return -1;
+      }
 			sleep(1.0);
 			k++;
 	}
@@ -197,17 +219,32 @@ int main(int argc, char **argv)
 	geometry_msgs::Pose current_pose, old_pose;	//获取当前末端位姿
 	current_pose=get_current_pose(group);
 	old_pose=current_pose;
+
+  //发送标志位
+	signal_pub.publish(flag);
+	ros::Duration(2).sleep();
+	flag.data=2;
 	
-	//位置1
+	/**************************************************************************************************************************/
+	/****************************************************位姿1*****************************************************************/
+	/**************************************************************************************************************************/
 	ROS_INFO("STATE 1");
-	random_pose.setOrigin(tf::Vector3(0.64882, -0.30854,  0.65841));
-  random_pose.setRotation(tf::Quaternion(0.68463, -0.22436, 0.68808, 0.086576));
+  zyx[0]+=0.1;
+  zyx[1]-=0.1;
+	random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
+  quaternion_add.setRPY(10*deg2rad,10*deg2rad,0);     //设置增量大小
+  quaternion*=quaternion_add;
+  random_pose.setRotation(quaternion);
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
 	k=0;
-	while(ros::ok() && k<5)
+	while(k<5)
 	{
+      if(!ros::ok())
+      {
+         return -1;
+      }
 			sleep(1.0);
 			k++;
 	}
@@ -216,127 +253,175 @@ int main(int argc, char **argv)
 	d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
 
-	//位置2
+  MatrixXd pose_m=MatrixXd::Zero(4, 4);   //当前位置，基坐标系下末端位姿齐次变换矩阵
+  kinova_arm_moveit_demo::toolposeChange poseChange;   //末端位姿齐次变换矩阵
+	kinova_arm_moveit_demo::toolposeChange pose;   //基坐标系下末端位姿
+  //当前末端位姿
+  pose_m=pose2matrix(current_pose); 
+  //发送运动前到运动后末端位姿的变换矩阵
+	for(int i=0; i<4; i++)
+  {
+    for(int j=0; j<4; j++)	
+	  {
+	    poseChange.pose_change[4*i+j]=d_pose(i,j);
+		  pose.pose_change[4*i+j]=pose_m(i,j);
+	  }		
+  }
+  pose_change_pub.publish(poseChange);
+	pose_pub.publish(pose);
+  //发送标志位
+	signal_pub.publish(flag);
+	ros::Duration(2).sleep();
+	flag.data=3;
+
+	/**************************************************************************************************************************/
+	/****************************************************位姿2*****************************************************************/
+	/**************************************************************************************************************************/
 	ROS_INFO("STATE 2");
-	random_pose.setOrigin(tf::Vector3(0.64882, -0.30854,  0.55841));
-  random_pose.setRotation(tf::Quaternion(0.68463, -0.22436, 0.68808, 0.086576));
+  zyx[0]+=0.05;
+  zyx[2]+=0.1;
+	random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
+  quaternion_add.setRPY(0,-10*deg2rad,15*deg2rad);     //设置增量大小
+  quaternion*=quaternion_add;
+  random_pose.setRotation(quaternion);
+  
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
 	k=0;
-	while(ros::ok() && k<5)
+	while(k<5)
 	{
+      if(!ros::ok())
+      {
+         return -1;
+      }
 			sleep(1.0);
 			k++;
 	}
 
 	current_pose=get_current_pose(group);	//获取当前末端位姿
+  d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
 
-	//位置3
+  //当前末端位姿
+  pose_m=pose2matrix(current_pose); 
+  //发送运动前到运动后末端位姿的变换矩阵
+	for(int i=0; i<4; i++)
+  {
+    for(int j=0; j<4; j++)	
+	  {
+	    poseChange.pose_change[4*i+j]=d_pose(i,j);
+		  pose.pose_change[4*i+j]=pose_m(i,j);
+	  }		
+  }
+  pose_change_pub.publish(poseChange);
+	pose_pub.publish(pose);
+  //发送标志位
+	signal_pub.publish(flag);
+	ros::Duration(2).sleep();
+	flag.data=4;
+
+	/**************************************************************************************************************************/
+	/****************************************************位姿3*****************************************************************/
+	/**************************************************************************************************************************/
 	ROS_INFO("STATE 3");
-	random_pose.setOrigin(tf::Vector3(0.64882, -0.30854,  0.60841));
-  random_pose.setRotation(tf::Quaternion(0.68463, -0.22436, 0.68808, 0.086576));
+  zyx[0]-=0.1;
+	random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
+  quaternion_add.setRPY(5*deg2rad,0,-10*deg2rad);     //设置增量大小
+  quaternion*=quaternion_add;
+  random_pose.setRotation(quaternion);
+  
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
 	k=0;
-	while(ros::ok() && k<5)
+	while(k<5)
 	{
+      if(!ros::ok())
+      {
+         return -1;
+      }
 			sleep(1.0);
 			k++;
 	}
 	current_pose=get_current_pose(group);
+  d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
 
-	//位置4
+  //当前末端位姿
+  pose_m=pose2matrix(current_pose); 
+  //发送运动前到运动后末端位姿的变换矩阵
+	for(int i=0; i<4; i++)
+  {
+    for(int j=0; j<4; j++)	
+	  {
+	    poseChange.pose_change[4*i+j]=d_pose(i,j);
+		  pose.pose_change[4*i+j]=pose_m(i,j);
+	  }		
+  }
+  pose_change_pub.publish(poseChange);
+	pose_pub.publish(pose);
+  //发送标志位
+	signal_pub.publish(flag);
+	ros::Duration(2).sleep();
+	flag.data=5;
+
+	/**************************************************************************************************************************/
+	/****************************************************位姿4*****************************************************************/
+	/**************************************************************************************************************************/
 	ROS_INFO("STATE 4");
-	random_pose.setOrigin(tf::Vector3(0.54882, -0.30854,  0.65841));
-  random_pose.setRotation(tf::Quaternion(0.68463, -0.22436, 0.68808, 0.086576));
+  zyx[0]-=0.05;
+  zyx[1]+=0.1;
+  zyx[2]+=0.1;
+	random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
+  quaternion_add.setRPY(5*deg2rad,10*deg2rad,-5*deg2rad);     //设置增量大小
+  quaternion*=quaternion_add;
+  random_pose.setRotation(quaternion);
+
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
 	k=0;
-	while(ros::ok() && k<5)
+	while(k<5)
 	{
+      if(!ros::ok())
+      {
+         return -1;
+      }
 			sleep(1.0);
 			k++;
 	}
 
 	current_pose=get_current_pose(group);	//获取当前末端位姿
+  d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
 
+
+  //当前末端位姿
+  pose_m=pose2matrix(current_pose); 
+  //发送运动前到运动后末端位姿的变换矩阵
+	for(int i=0; i<4; i++)
+  {
+    for(int j=0; j<4; j++)	
+	  {
+	    poseChange.pose_change[4*i+j]=d_pose(i,j);
+		  pose.pose_change[4*i+j]=pose_m(i,j);
+	  }		
+  }
+  pose_change_pub.publish(poseChange);
+	pose_pub.publish(pose);
+  //发送标志位
+	signal_pub.publish(flag);
+	ros::Duration(2).sleep();
+	flag.data=6;
+  
+  //释放标定板
 	sleep(10.0);
 	gripper_group_->setNamedTarget("Open");
 	gripper_group_->move();
 
-/*
-  while(ros::ok())
-  {
-    if (flag == false)
-    {
-      ros::spinOnce();
-      group.setStartState(*group.getCurrentState());
-
-      // 下面这几句只是为了展示规划的起始点
-      geometry_msgs::PoseStamped msg;
-      msg = group.getCurrentPose();
-
-      geometry_msgs::Pose current_pose;
-      current_pose = msg.pose;
-
-      geometry_msgs::Point position = current_pose.position;
-      //geometry_msgs::Orientation orientation = current_pose.orientation;
-
-      float aa, bb, cc;
-      aa = position.x;
-      bb = position.y;
-      cc = position.z;
-      ROS_INFO("Current end-effector State : x[%f], y[%f], z[%f]", aa, bb, cc);
-      //group.getCurrentRPY(const std::string &end_effector_link="j2s7s300_end_effector");
-      group.setPoseTarget(target_pose1);
-      
-      //　默认从当前位置规划至目标位置，因此我不需要额外添加语句去获取机器人当前姿态．
-      moveit::planning_interface::MoveGroup::Plan my_plan;
-
-      bool success = group.plan(my_plan);
-      ROS_INFO("Visualizing plan 1 (pose goal) %s",success?"":"FAILED");
-      // 实物控制的话删掉上面两句，并增加下面这句－－－－删掉是为了减少Rviz的使用所占用的时间
-      //group.move();
-
-      sleep(2.0);
-      if(grip == 0);
-        //手爪收紧---手爪的控制是否考虑受力的问题
-        // 给一个收紧时间
-      else if(grip == 1);
-        //手爪不动作
-      else if(grip == 2);
-        //手爪松开
-        // 给一个松开时间
-      else if(grip == 3);
-      //手爪不动作
-      else ;
-        
-      grip ++;
-      grip = grip%4;
-      flag = true;
-    }
-  }
-*/
+  sleep(1.0);
   ros::shutdown();  
   return 0;
 }
 
-  /*　测试是否收到了pose消息
-  geometry_msgs::Pose pose = msg->pose;
-  geometry_msgs::Point position = target_pose1.position;
-  geometry_msgs::Quaternion orientation = target_pose1.orientation;
-  float aaaa;
-  aaaa = orientation.x;
-  ROS_INFO("I got a date: [%f]", aaaa);*/  
-
-// 测试－创建一个话题hub，并发布geometry/Pose类型的数据
-// while(true){
-// ros::Publisher hub = node_handle.advertise<geometry_msgs::Pose>("hub", 20, true);
-// hub.publish(target_pose1);}
-// 结束
