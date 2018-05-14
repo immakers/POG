@@ -337,6 +337,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
 
     //抓取动作
     fingerControl(0.1);
+    ROS_INFO("Pick the goal successfully.");
     //抓取完毕
 
     //放置插值
@@ -358,6 +359,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
 
     //松开爪子
     fingerControl(0.9);
+    ROS_INFO("Place the goal successfully.");
     //松开完毕
 
 }

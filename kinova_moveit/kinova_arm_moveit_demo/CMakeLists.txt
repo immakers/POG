@@ -21,7 +21,6 @@ find_package(catkin REQUIRED
 
 find_package(Boost REQUIRED system filesystem date_time thread)
 find_package(Eigen REQUIRED)
-
 find_package(kinova_driver REQUIRED)
 
 #######################################
@@ -31,6 +30,7 @@ add_message_files(
 	FILES
 	targetState.msg
 	targetsVector.msg
+        toolposeChange.msg
 )
 
 generate_messages(
