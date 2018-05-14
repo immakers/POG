@@ -36,14 +36,14 @@
     </collision>     
   </link>
 
-  <!-- for gazebo -->
+  <!-- for gazebo 
   <link name="world"/>
   
   <joint name="connect_root_and_world" type="fixed">
     <child link="root" />
     <parent link="world" />
     <origin xyz="0 0 0" rpy="0 0 0" />    
-  </joint>  
+  </joint>  -->
 
   <property name="robot_root" value="root" />
 
