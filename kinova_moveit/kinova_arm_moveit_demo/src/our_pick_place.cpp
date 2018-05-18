@@ -336,12 +336,8 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     ROS_INFO("Go to the goal and prepare for picking .");
 
     //抓取动作
-<<<<<<< HEAD
-    //fingerControl(0.1);
-=======
     fingerControl(0.1);
     ROS_INFO("Pick the goal successfully.");
->>>>>>> c4fbc13a620c92d32d6f69284b1600a3d147620f
     //抓取完毕
 
     //放置插值
@@ -362,12 +358,8 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     ROS_INFO("Go to the goal and prepare for placing . ");
 
     //松开爪子
-<<<<<<< HEAD
-    //fingerControl(0.9);
-=======
     fingerControl(0.9);
     ROS_INFO("Place the goal successfully.");
->>>>>>> c4fbc13a620c92d32d6f69284b1600a3d147620f
     //松开完毕
 
 }
