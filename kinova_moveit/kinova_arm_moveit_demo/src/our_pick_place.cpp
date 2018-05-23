@@ -53,7 +53,7 @@ void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg);
 //接收targets_tag消息的回调函数，将接收到的消息更新到targetsTag里面
 void tagsCB(const rviz_teleop_commander::targets_tag &msg);
 //如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完或者一个目标物都没有返回3
-int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint);
+int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint, int &_n);
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
 //机械臂运动控制函数
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	arm_group.setEndEffectorLink( "j2s7s300_end_effector");
 	moveit::planning_interface::MoveGroup finger_group("gripper");
 
-    client = new Finger_actionlibClient(Finger_action_address, true);
+        client = new Finger_actionlibClient(Finger_action_address, true);
 
 	//实物控制的话，可删掉这两句－－删掉是为了减少Rviz的使用所占用的时间
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
@@ -151,13 +151,13 @@ int main(int argc, char **argv)
 		{
 			//判断当前抓取目标是否存在
 			kinova_arm_moveit_demo::targetState curTargetPoint;    //当前抓取点的xyz,后续考虑加姿态
-			int goalState=haveGoal(targetsTag,cur_target,curTargetPoint);
+			int goalState=haveGoal(targetsTag,cur_target,curTargetPoint,n);
 			if(goalState==1 && n<n_MAX)		//如果当前目标存在且抓取次数未达上限
 			{
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
-                pickAndPlace(curTargetPoint,arm_group);
+                                pickAndPlace(curTargetPoint,arm_group);
 
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
@@ -239,7 +239,7 @@ void tagsCB(const rviz_teleop_commander::targets_tag &msg)
 }
 
 //如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完或者一个目标物都没有返回3
-int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint)
+int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint,int &_n)
 {
 	int num=targets.size();		//检测到的物品的个数
 	if(cur_target>=targetsTag.size() || num==0 )		//全部抓完或者一个目标物都没有返回3
@@ -248,7 +248,7 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 	}
 	for(int i=0;i<num;i++)
 	{
-		if(targets[i].tag==targetsTag[cur_target])
+		if(targets[i].tag==targetsTag[cur_target] && _n<n_MAX)
 		{
 			curTargetPoint=targets[i];		//获取当前抓取物品的位置
 			return 1;
