@@ -54,8 +54,10 @@ Finger_actionlibClient* client=NULL;
 void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg);
 //接收targets_tag消息的回调函数，将接收到的消息更新到targetsTag里面
 void tagsCB(const rviz_teleop_commander::targets_tag &msg);
-//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完或者一个目标物都没有返回3
-int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint, int &_n);
+
+//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标,或者抓取次数达到上限返回2，如果全部抓完或者一个目标物都没有返回3
+int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint, const int& n);
+
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
 //机械臂运动控制函数
@@ -127,7 +129,7 @@ int main(int argc, char **argv)
 	}
 	getTargetsTag=0;	//等待完毕，getTargetsTag置0
 /*
-  	if(!getTags())	//如果没有标签输入则程序直接退出
+  if(!getTags())	//如果没有标签输入则程序直接退出
 	{
 		detectTarget.data=2;		//让visual_detect节点退出
 		detectTarget_pub.publish(detectTarget);
@@ -135,10 +137,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 */
+	detectTarget.data=1;		//让visual_detect节点检测目标
+	detectTarget_pub.publish(detectTarget);
+	ros::Duration(1.0).sleep();
+
+
 	/*************************************/
 	/********目标抓取*********************/
 	/*************************************/
-    // 先前往放置位置
+  // 先前往放置位置
     setPlacePose();
     arm_group.setPoseTarget(placePose);
     arm_group.move();
@@ -156,11 +163,14 @@ int main(int argc, char **argv)
 			int goalState=haveGoal(targetsTag,cur_target,curTargetPoint,n);
 			if(goalState==1 && n<n_MAX)		//如果当前目标存在且抓取次数未达上限
 			{
+				ROS_INFO("grab start");
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
                                 pickAndPlace(curTargetPoint,arm_group);
 
+				ROS_INFO("grab stop");
+				
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
 				detectTarget.data=1;		//让visual_detect节点进行视觉检测
@@ -221,7 +231,13 @@ bool getTags()
 //接收到detect_result消息的回调函数，将消息内容赋值到全局变量targets里面
 void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg)
 {
-	targets=msg.targets;
+	int num = msg.targets.size();
+    targets.clear();
+	targets.resize(num);
+	for(int i=0; i<num; i++)
+	{
+		targets[i]=msg.targets[i];
+	}
 	getTargets=1;	//接收到视觉定位结果getTargets置1
 }
 //接收targets_tag消息的回调函数，将接收到的消息更新到targetsTag里面
@@ -240,22 +256,33 @@ void tagsCB(const rviz_teleop_commander::targets_tag &msg)
 	getTargetsTag=1;	//接收到需要抓取的目标物的标签
 }
 
-//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标返回2，如果全部抓完或者一个目标物都没有返回3
-int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint,int &_n)
+
+//如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标,或者抓取次数达到上限返回2，如果全部抓完或者一个目标物都没有返回3
+int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint,const int& n)
 {
 	int num=targets.size();		//检测到的物品的个数
 	if(cur_target>=targetsTag.size() || num==0 )		//全部抓完或者一个目标物都没有返回3
 	{
+		ROS_INFO("have goal 3");
 		return 3;
 	}
+  
+  	if(n>=n_MAX)   		//抓取次数达到上限
+  	{
+		ROS_INFO("have goal 2");
+     	return 2;
+  	}
+
 	for(int i=0;i<num;i++)
 	{
-		if(targets[i].tag==targetsTag[cur_target] && _n<n_MAX)
+		if(targets[i].tag==targetsTag[cur_target] && n<n_MAX)
 		{
 			curTargetPoint=targets[i];		//获取当前抓取物品的位置
+			ROS_INFO("have goal 1");
 			return 1;
 		}
 	}
+	ROS_INFO("have goal");
 	return 2;
 }
 

@@ -90,6 +90,11 @@ add_executable(our_pick_place src/our_pick_place.cpp)
 target_link_libraries(our_pick_place ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS our_pick_place DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 ## end
+## added by qcrong in 2018/5/25
+add_executable(visual_detect_simulate src/visual_detect_simulate.cpp)
+target_link_libraries(visual_detect_simulate ${catkin_LIBRARIES} )
+install(TARGETS visual_detect_simulate DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+## end
 
 add_executable(work_scene src/work_scene.cpp)
 target_link_libraries(work_scene ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
