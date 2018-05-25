@@ -24,6 +24,8 @@
 #include "rviz_teleop_commander/targets_tag.h"		//自定义消息类型，传递要抓取的目标标签 qcrong20180430
 #include "rviz_teleop_commander/grab_result.h"		//自定义消息类型，传递当前抓取的目标标签和抓取次数 qcrong20180430
 
+#define Simulation 1     //仿真为1，实物为0
+
 using namespace std;
 
 //手指client类型自定义
@@ -80,9 +82,9 @@ int main(int argc, char **argv)
 	
 	moveit::planning_interface::MoveGroup arm_group("arm");
 	arm_group.setEndEffectorLink( "j2s7s300_end_effector");
-	moveit::planning_interface::MoveGroup finger_group("gripper");
 
-    client = new Finger_actionlibClient(Finger_action_address, true);
+
+        client = new Finger_actionlibClient(Finger_action_address, true);
 
 	//实物控制的话，可删掉这两句－－删掉是为了减少Rviz的使用所占用的时间
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
@@ -325,6 +327,9 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     geometry_msgs::Pose targetPose;	//定义抓取位姿
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
+
+    moveit::planning_interface::MoveGroup *finger_group;
+    finger_group = new moveit::planning_interface::MoveGroup("gripper");
                 
     point.x = curTargetPoint.x;//获取抓取位姿
     point.y = curTargetPoint.y;
@@ -360,7 +365,15 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     ROS_INFO("Go to the goal and prepare for picking .");
 
     //抓取动作
-    fingerControl(0.1);
+    if(Simulation)
+    {
+        finger_group->setNamedTarget("Close");   //仿真使用         
+	finger_group->move();      
+    }
+    else if(!Simulation)
+    {
+        fingerControl(0.9);               //实物，Simulation宏改为0
+    }
     //抓取完毕
 
     //放置插值
@@ -381,7 +394,15 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     ROS_INFO("Go to the goal and prepare for placing . ");
 
     //松开爪子
-    fingerControl(0.9);
+    if(Simulation)
+    {
+        finger_group->setNamedTarget("Open");   //仿真使用    
+	finger_group->move();            
+    }
+    else if(!Simulation)
+    {
+        fingerControl(0.1);              //实物，Simulation宏改为0
+    }
     //松开完毕
 
 }
