@@ -207,9 +207,9 @@
       <alwaysOn>true</alwaysOn>
       <updateRate>15.0</updateRate>
       <cameraName>kinect</cameraName>
-      <imageTopicName>/kinect/rgb/image_raw</imageTopicName>
+      <imageTopicName>/kinect2/qhd/image_color_rect</imageTopicName>
       <cameraInfoTopicName>/kinect/rgb/camera_info</cameraInfoTopicName>
-      <depthImageTopicName>/kinect/rgb/image_raw</depthImageTopicName>
+      <depthImageTopicName>/kinect2/qhd/image_depth_rect</depthImageTopicName>
       <depthImageCameraInfoTopicName>/kinect/rgb/camera_info</depthImageCameraInfoTopicName>
       <pointCloudTopicName>/kinect/rgb/points</pointCloudTopicName>
       <frameName>camera_rgb_optical_frame</frameName>
