@@ -54,8 +54,10 @@ Finger_actionlibClient* client=NULL;
 void detectResultCB(const kinova_arm_moveit_demo::targetsVector &msg);
 //接收targets_tag消息的回调函数，将接收到的消息更新到targetsTag里面
 void tagsCB(const rviz_teleop_commander::targets_tag &msg);
+
 //如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标,或者抓取次数达到上限返回2，如果全部抓完或者一个目标物都没有返回3
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint, const int& n);
+
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
 //机械臂运动控制函数
@@ -82,7 +84,6 @@ int main(int argc, char **argv)
 	
 	moveit::planning_interface::MoveGroup arm_group("arm");
 	arm_group.setEndEffectorLink( "j2s7s300_end_effector");
-
 
         client = new Finger_actionlibClient(Finger_action_address, true);
 
@@ -165,7 +166,7 @@ int main(int argc, char **argv)
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
-                pickAndPlace(curTargetPoint,arm_group);
+                                pickAndPlace(curTargetPoint,arm_group);
 
 				ROS_INFO("grab stop");
 				
@@ -254,6 +255,7 @@ void tagsCB(const rviz_teleop_commander::targets_tag &msg)
 	getTargetsTag=1;	//接收到需要抓取的目标物的标签
 }
 
+
 //如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标,或者抓取次数达到上限返回2，如果全部抓完或者一个目标物都没有返回3
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint,const int& n)
 {
@@ -272,7 +274,7 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 
 	for(int i=0;i<num;i++)
 	{
-		if(targets[i].tag==targetsTag[cur_target])
+		if(targets[i].tag==targetsTag[cur_target] && n<n_MAX)
 		{
 			curTargetPoint=targets[i];		//获取当前抓取物品的位置
 			ROS_INFO("have goal 1");
@@ -328,9 +330,11 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
 
+
     moveit::planning_interface::MoveGroup *finger_group;
     finger_group = new moveit::planning_interface::MoveGroup("gripper");
                 
+
     point.x = curTargetPoint.x;//获取抓取位姿
     point.y = curTargetPoint.y;
     point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
