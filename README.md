@@ -1,4 +1,8 @@
 ## 团队日志
+2018/05/26
+- 添加仿真手指控制，修改宏Simulation为0即可切换为实物控制
+
+
 2018/5/8(Petori)
 - rostopic发话题测试通过
 - 尚存问题： Trajectory message contains waypoints that are not strictly increasing in time.
