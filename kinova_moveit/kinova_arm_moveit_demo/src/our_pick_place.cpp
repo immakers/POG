@@ -78,8 +78,8 @@ int main(int argc, char **argv)
 	//等待rviz启动，最后集成用一个launch文件启动时需要
 	//ros::Duration(10.0).sleep();
 	
-	moveit::planning_interface::MoveGroup arm_group("arm");
-	arm_group.setEndEffectorLink( "j2s7s300_end_effector");
+        moveit::planning_interface::MoveGroup arm_group("arm");
+        //arm_group.setEndEffectorLink( "j2s7s300_end_effector");
 	moveit::planning_interface::MoveGroup finger_group("gripper");
 
     client = new Finger_actionlibClient(Finger_action_address, true);
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
-                pickAndPlace(curTargetPoint,arm_group);
+                                pickAndPlace(curTargetPoint,arm_group);
 
 				ROS_INFO("grab stop");
 				
@@ -321,7 +321,6 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
 //5--执行插值后的路径
 //6--放置物体
 //7--等待下一个目标点
-    
     geometry_msgs::Pose targetPose;	//定义抓取位姿
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
@@ -344,13 +343,16 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     //抓取插值
     std::vector<geometry_msgs::Pose> pickWayPoints;
     pickWayPoints = pickInterpolate(placePose, targetPose);
+    ROS_INFO("Good2");
 
     //前往抓取点
     moveit_msgs::RobotTrajectory trajectory1;
+    ROS_INFO("Good3");
     arm_group.computeCartesianPath(pickWayPoints,
                                    0.01,  // eef_step
                                    0.0,   // jump_threshold
                                    trajectory1);
+    ROS_INFO("Good4");
 
     pick_plan.trajectory_ = trajectory1;
     arm_group.execute(pick_plan);
@@ -367,6 +369,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     //放置插值
     std::vector<geometry_msgs::Pose> placeWayPoints;
     placeWayPoints = placeInterpolate(targetPose, placePose);
+    ROS_INFO("Good5");
 
     //前往放置点
     moveit_msgs::RobotTrajectory trajectory2;
@@ -385,7 +388,6 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint,
     fingerControl(0.9);
     ROS_INFO("Place the goal successfully.");
     //松开完毕
-
 }
 //抓取插值函数
 std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose)
