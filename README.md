@@ -1,4 +1,9 @@
 ## 团队日志
+2018/6/1(Petori)
+- 解决控制UR实物时，机器人末端实际位姿和给定位姿不一致的问题
+- 注意！控制UR实物时，需要将our_pick_place.cpp文件中的变量名"arm"改为"manipulator"；且将setPlacePose中的语句块解除注释（调用changePoseForUR实现位姿态转换）
+- 目前出现这个问题的原因未知，采取变换位姿的方式能解决这个问题，先这样用着
+
 2018/5/28(Petori)
 - 解决了不能再次发送目标点的Bug
 - 注释掉了j2s7s300_gazebo_demo.launch中打开rviz的语句

@@ -37,7 +37,7 @@ const int n_MAX=10;			//同一物品最大抓取次数
 vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
 geometry_msgs::Pose placePose;	//机械臂抓取放置位置,为规划方便，将放置位置设为起始位置
-//moveit::planning_interface::MoveGroup arm_group("arm");//改为全局变量，方便机械臂运动规划的使用
+//moveit::planning_interface::MoveGroup arm_group("manipulator");//改为全局变量，方便机械臂运动规划的使用
 vector<int> targetsTag;		//需要抓取的目标物的标签
 bool getTargetsTag=0;	//当接收到需要抓取的目标物的标签时置1，等待结束后置0
 
@@ -70,6 +70,8 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
 void setPlacePose();
 //前往放置位置
 void goPlacePose(geometry_msgs::Pose placePose);
+// 转换位姿，用于控制UR实物
+geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose);
 
 int main(int argc, char **argv)
 {
@@ -542,6 +544,11 @@ void setPlacePose()
     placePose.orientation.y = 0;
     placePose.orientation.z = 0;
     placePose.orientation.w = 0;
+
+// 如果使用UR实物，请解除下面三行的注释
+//    geometry_msgs::Pose pose;
+//    pose = placePose;
+//    placePose = changePoseForUR(pose);
 }
 
 //前往放置位置
@@ -550,4 +557,53 @@ void goPlacePose(geometry_msgs::Pose placePose)
     moveit::planning_interface::MoveGroup arm_group("arm");
     arm_group.setPoseTarget(placePose);
     arm_group.move();
+}
+
+// 把位姿态转换一下，给UR使用
+geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose)
+{
+    double x_init,y_init,z_init,w_init;
+    double x_mid,y_mid,z_mid,w_mid;
+    double x_trans,y_trans,z_trans,w_trans;
+    double x_x180,y_x180,z_x180,w_x180;
+    double x_y270,y_y270,z_y270,w_y270;
+
+    pose.position.x = -pose.position.x;
+    pose.position.y = -pose.position.y;
+    pose.position.z = pose.position.z;
+
+    x_init = pose.orientation.x;
+    y_init = pose.orientation.y;
+    z_init = pose.orientation.z;
+    w_init = pose.orientation.w;
+
+    x_x180 = 1;
+    y_x180 = 0;
+    z_x180 = 0;
+    w_x180 = 0;
+
+    x_y270 = 0;
+    y_y270 = -0.707;
+    z_y270 = 0;
+    w_y270 = 0.707;
+
+    // init and y270
+    w_mid = z_init*z_y270 - x_init*x_y270 - y_init*y_y270 - z_init*z_y270;
+    x_mid = w_init*x_y270 + x_init*w_y270 + z_init*y_y270 - y_init*z_y270;
+    y_mid = w_init*y_y270 + y_init*w_y270 + x_init*z_y270 - z_init*x_y270;
+    z_mid = w_init*z_y270 + z_init*w_y270 + y_init*x_y270 - x_init*y_y270;
+
+    // mid and x180
+    w_trans = z_mid*z_x180 - x_mid*x_x180 - y_mid*y_x180 - z_mid*z_x180;
+    x_trans = w_mid*x_x180 + x_mid*w_x180 + z_mid*y_x180 - y_mid*z_x180;
+    y_trans = w_mid*y_x180 + y_mid*w_x180 + x_mid*z_x180 - z_mid*x_x180;
+    z_trans = w_mid*z_x180 + z_mid*w_x180 + y_mid*x_x180 - x_mid*y_x180;
+
+    // so...
+    pose.orientation.x = x_trans;
+    pose.orientation.y = y_trans;
+    pose.orientation.z = z_trans;
+    pose.orientation.w = w_trans;
+
+    return pose;
 }
