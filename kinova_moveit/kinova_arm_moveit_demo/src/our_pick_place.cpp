@@ -321,14 +321,14 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 //5--执行插值后的路径
 //6--放置物体
 //7--等待下一个目标点
-    moveit::planning_interface::MoveGroup arm_group("arm");
+    moveit::planning_interface::MoveGroup arm_group("manipulator");
     geometry_msgs::Pose targetPose;	//定义抓取位姿
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
 
 
-    moveit::planning_interface::MoveGroup *finger_group;
-    finger_group = new moveit::planning_interface::MoveGroup("gripper");
+//    moveit::planning_interface::MoveGroup *finger_group;
+//    finger_group = new moveit::planning_interface::MoveGroup("gripper");
                 
 
     point.x = curTargetPoint.x;//获取抓取位姿
@@ -345,6 +345,12 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
+
+    // if we use ur for experiment----------------------------------------------------------------------------------------------------for ur
+    geometry_msgs::Pose pose;
+    pose = targetPose;
+    targetPose = changePoseForUR(pose);
+    //end
 
     //抓取插值
     std::vector<geometry_msgs::Pose> pickWayPoints;
@@ -365,15 +371,15 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     ROS_INFO("Go to the goal and prepare for picking .");
 
     //抓取动作
-    if(Simulation)
-    {
-        finger_group->setNamedTarget("Close");   //仿真使用         
-	finger_group->move();      
-    }
-    else if(!Simulation)
-    {
-        fingerControl(0.9);               //实物，Simulation宏改为0
-    }
+//    if(Simulation)
+//    {
+//        finger_group->setNamedTarget("Close");   //仿真使用
+//	finger_group->move();
+//    }
+//    else if(!Simulation)
+//    {
+//        fingerControl(0.9);               //实物，Simulation宏改为0
+//    }
     //抓取完毕
 
     //放置插值
@@ -394,17 +400,17 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     ROS_INFO("Go to the goal and prepare for placing . ");
 
     //松开爪子
-    if(Simulation)
-    {
-        finger_group->setNamedTarget("Open");   //仿真使用    
-	finger_group->move();            
-    }
-    else if(!Simulation)
-    {
-        fingerControl(0.1);              //实物，Simulation宏改为0
-    }
+//    if(Simulation)
+//    {
+//        finger_group->setNamedTarget("Open");   //仿真使用
+//	finger_group->move();
+//    }
+//    else if(!Simulation)
+//    {
+//        fingerControl(0.1);              //实物，Simulation宏改为0
+//    }
     //松开完毕
-	ROS_INFO("Waiting for the next goal.");
+    ROS_INFO("Waiting for the next goal.");
 }
 //抓取插值函数
 std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,geometry_msgs::Pose targetPose)
@@ -458,7 +464,7 @@ std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,g
     // midPose4
     midPoint.x = targetPoint.x;
     midPoint.y = targetPoint.y;
-    midPoint.z = targetPoint.z;
+    midPoint.z = startPoint.z;
 
     midPose4.position = midPoint;
     midPose4.orientation = targetPose.orientation;
@@ -546,15 +552,15 @@ void setPlacePose()
     placePose.orientation.w = 0;
 
 // 如果使用UR实物，请解除下面三行的注释
-//    geometry_msgs::Pose pose;
-//    pose = placePose;
-//    placePose = changePoseForUR(pose);
+    geometry_msgs::Pose pose;
+    pose = placePose;
+    placePose = changePoseForUR(pose);
 }
 
 //前往放置位置
 void goPlacePose(geometry_msgs::Pose placePose)
 {
-    moveit::planning_interface::MoveGroup arm_group("arm");
+    moveit::planning_interface::MoveGroup arm_group("manipulator");
     arm_group.setPoseTarget(placePose);
     arm_group.move();
 }

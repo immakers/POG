@@ -1,4 +1,14 @@
 ## 团队日志
+2018/6/2(Petori)
+- 解决在gazebo中仿真机械臂末端不向下移动的问题（插值错误导致）
+- 补充代码使our_pick_place.cpp完全适用于UR
+- 本次上传的代码版本为适用于控制UR实物的版本(所做更改在下一条详述）
+- 当使用UR时，需要做出的代码更改如下
+ - 将代码中所有的arm_group("arm")改为arm_group("manipulator")
+ - 找到setPlacePose函数，根据注释文字，取消一部分代码块的注释
+ - 找到pickAndPlace函数，根据注释文字(if we use ur for experiment)，取消一部分代码块的注释
+ - 注释掉pickAndPlace函数中关于手爪的定义（两行），和手爪开闭的代码块
+
 2018/6/1(Petori)
 - 解决控制UR实物时，机器人末端实际位姿和给定位姿不一致的问题
 - 注意！控制UR实物时，需要将our_pick_place.cpp文件中的变量名"arm"改为"manipulator"；且将setPlacePose中的语句块解除注释（调用changePoseForUR实现位姿态转换）
