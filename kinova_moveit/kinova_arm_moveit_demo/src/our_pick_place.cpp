@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 				n++;		//当前抓取次数+1
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
-                                pickAndPlace(curTargetPoint);
+                pickAndPlace(curTargetPoint);
 				
 				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
 				//让visual_detect节点进行检测
@@ -257,6 +257,7 @@ void tagsCB(const rviz_teleop_commander::targets_tag &msg)
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint,const int& n)
 {
 	int num=targets.size();		//检测到的物品的个数
+	ROS_INFO("size of goal = %d",num);
 	if(cur_target>=targetsTag.size() || num==0 )		//全部抓完或者一个目标物都没有返回3
 	{
 		ROS_INFO("have goal 3");
@@ -321,7 +322,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 //5--执行插值后的路径
 //6--放置物体
 //7--等待下一个目标点
-    moveit::planning_interface::MoveGroup arm_group("manipulator");
+    moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
     geometry_msgs::Pose targetPose;	//定义抓取位姿
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
@@ -347,9 +348,9 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     targetPose.orientation = orientation;
 
     // if we use ur for experiment----------------------------------------------------------------------------------------------------for ur
-    geometry_msgs::Pose pose;
-    pose = targetPose;
-    targetPose = changePoseForUR(pose);
+    //geometry_msgs::Pose pose;
+    //pose = targetPose;
+    //targetPose = changePoseForUR(pose);
     //end
 
     //抓取插值
@@ -552,15 +553,15 @@ void setPlacePose()
     placePose.orientation.w = 0;
 
 // 如果使用UR实物，请解除下面三行的注释
-    geometry_msgs::Pose pose;
-    pose = placePose;
-    placePose = changePoseForUR(pose);
+    //geometry_msgs::Pose pose;
+    //pose = placePose;
+    //placePose = changePoseForUR(pose);
 }
 
 //前往放置位置
 void goPlacePose(geometry_msgs::Pose placePose)
 {
-    moveit::planning_interface::MoveGroup arm_group("manipulator");
+    moveit::planning_interface::MoveGroup arm_group("arm");
     arm_group.setPoseTarget(placePose);
     arm_group.move();
 }

@@ -7,24 +7,28 @@ int flag=0;
 
 void detect_target_CB(const std_msgs::Int8 &msg)
 {
+	ROS_INFO("receive");
 	if(msg.data==1)
 	{
 		flag=1;
+		ROS_INFO("receive 1");
 	}
-	if(msg.data==2)
+	else if(msg.data==2)
     {
 		flag=2;
+		ROS_INFO("receive 2");
 	}
     else
 	{
 		flag=0;
+		ROS_INFO("receive 3");
 	}
 }
 
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "our_pick_place");
+	ros::init(argc, argv, "visual_detect_simulate");
 	ros::NodeHandle node_handle;
 
 	ros::Publisher detect_result_pub = node_handle.advertise<kinova_arm_moveit_demo::targetsVector>("detect_result",10);
@@ -32,20 +36,18 @@ int main(int argc, char **argv)
 	ros::Subscriber detect_target_sub = node_handle.subscribe("detect_target",10,detect_target_CB);
 
 	kinova_arm_moveit_demo::targetsVector target_vec;
-    kinova_arm_moveit_demo::targetState target_sta;
-    target_sta.tag=9;
-	target_sta.x=0.3;
-	target_sta.y=0.6;
-	target_sta.z=0.1;
-	for(int i=9;i<=0;i--)
+    target_vec.targets.resize(10);
+	for(int i=9;i<0;i--)
 	{
-		target_vec.targets.push_back(target_sta);
-		target_sta.tag--;
+		target_vec.targets[i].tag=i;
+		target_vec.targets[i].x=-0.27;
+		target_vec.targets[i].y=0.55;
+		target_vec.targets[i].z=0.1;
 	}
 	
 
 
-	while(flag!=2)
+	while(flag!=2 && ros::ok())
 	{
 		if(flag==1)		//模拟发送检测结果
 		{
@@ -53,8 +55,11 @@ int main(int argc, char **argv)
 			detect_result_pub.publish(target_vec);
 			ros::Duration(1.0).sleep();
 			target_vec.targets.pop_back();
+			ROS_INFO("targets");
+			break;
 		}
 		ros::Duration(0.5).sleep();
+		ros::spinOnce();
 	}
   
 
