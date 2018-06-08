@@ -1,4 +1,8 @@
 ## 团队日志
+2018/6/2(丘椿荣)
+- visual_detect_simulate虚拟视觉节点数据收发成功，等待测试our_pack_place节点接收逻辑
+- 当前UR控制上的代码注释了，当前为控制KINOVA的
+
 2018/6/2(Petori)
 - 解决在gazebo中仿真机械臂末端不向下移动的问题（插值错误导致）
 - 补充代码使our_pick_place.cpp完全适用于UR
