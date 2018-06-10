@@ -25,6 +25,8 @@
 #include "rviz_teleop_commander/grab_result.h"		//自定义消息类型，传递当前抓取的目标标签和抓取次数 qcrong20180430
 
 #define Simulation 1     //仿真为1，实物为0
+#define UR5
+
 
 using namespace std;
 
@@ -322,7 +324,11 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 //5--执行插值后的路径
 //6--放置物体
 //7--等待下一个目标点
+#ifdef UR5
+    moveit::planning_interface::MoveGroup arm_group("manipulator");	//manipulator
+#else
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
+#endif
     geometry_msgs::Pose targetPose;	//定义抓取位姿
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
@@ -347,11 +353,12 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
 
-    // if we use ur for experiment----------------------------------------------------------------------------------------------------for ur
-    //geometry_msgs::Pose pose;
-    //pose = targetPose;
-    //targetPose = changePoseForUR(pose);
-    //end
+    // if we use ur for experiment-----------------------------------------------------------------------------------------for ur
+#ifdef UR5
+    geometry_msgs::Pose pose;
+    pose = targetPose;
+    targetPose = changePoseForUR(pose);
+#endif
 
     //抓取插值
     std::vector<geometry_msgs::Pose> pickWayPoints;
@@ -553,15 +560,21 @@ void setPlacePose()
     placePose.orientation.w = 0;
 
 // 如果使用UR实物，请解除下面三行的注释
-    //geometry_msgs::Pose pose;
-    //pose = placePose;
-    //placePose = changePoseForUR(pose);
+#ifdef UR5
+    geometry_msgs::Pose pose;
+    pose = placePose;
+    placePose = changePoseForUR(pose);
+#endif
 }
 
 //前往放置位置
 void goPlacePose(geometry_msgs::Pose placePose)
 {
-    moveit::planning_interface::MoveGroup arm_group("arm");
+#ifdef UR5
+    moveit::planning_interface::MoveGroup arm_group("manipulator");	//manipulator
+#else
+    moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
+#endif
     arm_group.setPoseTarget(placePose);
     arm_group.move();
 }
