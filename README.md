@@ -1,5 +1,9 @@
 ## 团队日志
 2018/6/22(丘椿荣)
+- 修改gazebo中kinect节点发布的话题名称，发现table_basket/urdf/table_kinova.urdf.xacro中文件第211或者213中任意一行修改为/kinect2/qhd/camera_info后kinect2_recognition_node都可以运行，目前尚不清楚改哪个好
+
+
+2018/6/22(丘椿荣)
 - visual_detect_simulate虚拟视觉节点基本完成，初步测试通过
 - our_pick_place 对gui界面当前抓取目标和抓取次数的更新提前
 

@@ -208,9 +208,9 @@
       <updateRate>15.0</updateRate>
       <cameraName>kinect</cameraName>
       <imageTopicName>/kinect2/qhd/image_color_rect</imageTopicName>
-      <cameraInfoTopicName>/kinect/rgb/camera_info</cameraInfoTopicName>
+      <cameraInfoTopicName>/kinect2/qhd/camera_info</cameraInfoTopicName>			<!-- /kinect2/qhd/camera_info -->
       <depthImageTopicName>/kinect2/qhd/image_depth_rect</depthImageTopicName>
-      <depthImageCameraInfoTopicName>/kinect/rgb/camera_info</depthImageCameraInfoTopicName>
+      <depthImageCameraInfoTopicName>/kinect/rgb/camera_info</depthImageCameraInfoTopicName>     <!-- /kinect2/qhd/camera_info -->
       <pointCloudTopicName>/kinect/rgb/points</pointCloudTopicName>
       <frameName>camera_rgb_optical_frame</frameName>
       <pointCloudCutoff>0.35</pointCloudCutoff>
