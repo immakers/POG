@@ -7,7 +7,7 @@ int flag=0;
 
 void detect_target_CB(const std_msgs::Int8 &msg)
 {
-	ROS_INFO("receive");
+	//ROS_INFO("receive");
 	if(msg.data==1)
 	{
 		flag=1;
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 
 	kinova_arm_moveit_demo::targetsVector target_vec;
     target_vec.targets.resize(10);
-	for(int i=9;i<0;i--)
+	for(int i=9;i>=0;i--)
 	{
 		target_vec.targets[i].tag=i;
 		target_vec.targets[i].x=-0.27;
@@ -56,7 +56,6 @@ int main(int argc, char **argv)
 			ros::Duration(1.0).sleep();
 			target_vec.targets.pop_back();
 			ROS_INFO("targets");
-			break;
 		}
 		ros::Duration(0.5).sleep();
 		ros::spinOnce();

@@ -1,4 +1,8 @@
 ## 团队日志
+2018/6/22(丘椿荣)
+- visual_detect_simulate虚拟视觉节点基本完成，初步测试通过
+- our_pick_place 对gui界面当前抓取目标和抓取次数的更新提前
+
 2018/6/2(丘椿荣)
 - visual_detect_simulate虚拟视觉节点数据收发成功，等待测试our_pack_place节点接收逻辑
 - 当前UR控制上的代码注释了，当前为控制KINOVA的
