@@ -25,7 +25,7 @@
 #include "rviz_teleop_commander/grab_result.h"		//自定义消息类型，传递当前抓取的目标标签和抓取次数 qcrong20180430
 
 #define Simulation 1     //仿真为1，实物为0
-#define UR5
+//#define UR5
 
 
 using namespace std;
@@ -165,6 +165,12 @@ int main(int argc, char **argv)
 			if(goalState==1 && n<n_MAX)		//如果当前目标存在且抓取次数未达上限
 			{
 				n++;		//当前抓取次数+1
+
+				//发布抓取状态
+				grabResultMsg.now_target=targetsTag[cur_target];
+				grabResultMsg.grab_times=n;
+				grab_result_pub.publish(grabResultMsg);
+
 				//进行抓取放置，要求抓取放置后返回初始位置
 				//周佩---机械臂运动控制---执行抓取－放置－过程
                 pickAndPlace(curTargetPoint);
@@ -173,10 +179,6 @@ int main(int argc, char **argv)
 				//让visual_detect节点进行检测
 				detectTarget.data=1;		//让visual_detect节点进行视觉检测
 				detectTarget_pub.publish(detectTarget);
-				//发布抓取状态
-				grabResultMsg.now_target=targetsTag[cur_target];
-				grabResultMsg.grab_times=n;
-				grab_result_pub.publish(grabResultMsg);
 			}
 			else if(goalState==2)			//当前目标不存在但还有需要抓取的目标
 			{
