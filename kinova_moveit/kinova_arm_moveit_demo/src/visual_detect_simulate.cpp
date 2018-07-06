@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 		target_vec.targets[i].tag=i;
 		target_vec.targets[i].x=-0.27;
 		target_vec.targets[i].y=0.55;
-		target_vec.targets[i].z=0.1;
+		target_vec.targets[i].z=0.03;
 	}
 	
 

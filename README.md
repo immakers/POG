@@ -1,4 +1,7 @@
 ## 团队日志
+2018/7/6(丘椿荣)
+- 修改取消仿真环境下对kinova手抓的注释
+
 2018/6/22(丘椿荣)
 - 修改gazebo中kinect节点发布的话题名称，发现table_basket/urdf/table_kinova.urdf.xacro中文件第211或者213中任意一行修改为/kinect2/qhd/camera_info后kinect2_recognition_node都可以运行，目前尚不清楚改哪个好
 
