@@ -25,8 +25,7 @@
 #include "rviz_teleop_commander/grab_result.h"		//自定义消息类型，传递当前抓取的目标标签和抓取次数 qcrong20180430
 
 #define Simulation 1     //仿真为1，实物为0
-//#define UR5
-
+//#define UR5		//使用ur5
 
 using namespace std;
 
@@ -336,8 +335,25 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     geometry_msgs::Quaternion orientation;
 
 
-//    moveit::planning_interface::MoveGroup *finger_group;
-//    finger_group = new moveit::planning_interface::MoveGroup("gripper");
+    moveit::planning_interface::MoveGroup *finger_group;
+    finger_group = new moveit::planning_interface::MoveGroup("gripper");
+ 
+#ifdef UR5
+//ur5手爪的动作
+
+#else
+    //抓取动作
+    if(Simulation)
+    {
+        finger_group->setNamedTarget("Open");   //仿真使用
+	finger_group->move();
+    }
+    else if(!Simulation)
+    {
+        fingerControl(0.1);               //实物，Simulation宏改为0
+    }
+    //抓取完毕
+#endif
                 
 
     point.x = curTargetPoint.x;//获取抓取位姿
@@ -380,17 +396,22 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     ROS_INFO("Planning time is [%lf]s.", tPlan1);
     ROS_INFO("Go to the goal and prepare for picking .");
 
+#ifdef UR5
+    //ur5手抓的动作
+
+#else
     //抓取动作
-//    if(Simulation)
-//    {
-//        finger_group->setNamedTarget("Close");   //仿真使用
-//	finger_group->move();
-//    }
-//    else if(!Simulation)
-//    {
-//        fingerControl(0.9);               //实物，Simulation宏改为0
-//    }
+    if(Simulation)
+    {
+        finger_group->setNamedTarget("Close");   //仿真使用
+	finger_group->move();
+    }
+    else if(!Simulation)
+    {
+        fingerControl(0.9);               //实物，Simulation宏改为0
+    }
     //抓取完毕
+#endif
 
     //放置插值
     std::vector<geometry_msgs::Pose> placeWayPoints;
@@ -409,17 +430,24 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     ROS_INFO("Planning time is [%lf]s.", tPlan2);
     ROS_INFO("Go to the goal and prepare for placing . ");
 
+#ifdef UR5
+    //ur5手抓的动作
+
+#else
+
     //松开爪子
-//    if(Simulation)
-//    {
-//        finger_group->setNamedTarget("Open");   //仿真使用
-//	finger_group->move();
-//    }
-//    else if(!Simulation)
-//    {
-//        fingerControl(0.1);              //实物，Simulation宏改为0
-//    }
+    if(Simulation)
+    {
+        finger_group->setNamedTarget("Open");   //仿真使用
+	finger_group->move();
+    }
+    else if(!Simulation)
+    {
+        fingerControl(0.1);              //实物，Simulation宏改为0
+    }
     //松开完毕
+#endif
+
     ROS_INFO("Waiting for the next goal.");
 }
 //抓取插值函数
