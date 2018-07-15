@@ -3,6 +3,13 @@
 -添加四元数到targetState.msg
 -将物品坐标从相机坐标系转 换到机械臂坐标系下
 
+2018/7/9(Petori)
+- 修改UR实物控制，通过给定关节角的方式设置初始位置，以避开规划问题
+- 减少路径插值次数，以节省机器人执行路径的时间
+- 本次调试发现两个新问题，如下。未发现修改设置即能使其解决的办法，但是下面两个问题导致的抓取失败均可通过多次抓取解决。
+- 遇到报错`start point deviates from current robot state more than 0.01`，可通过`rosparam set /move_group/trajectory_execution/allowed_start_tolerance`解决
+- 新的报错`Controller  failed with error code INVALID_GOAL`
+
 2018/7/6(丘椿荣)
 - 修改取消仿真环境下对kinova手抓的注释
 

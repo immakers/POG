@@ -26,7 +26,7 @@
 #include <Eigen/Eigen>
 
 #define Simulation 1     //仿真为1，实物为0
-//#define UR5		//使用ur5
+#define UR5		//使用ur5
 
 using namespace std;
 using namespace Eigen;
@@ -351,14 +351,12 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     moveit::planning_interface::MoveGroup arm_group("manipulator");	//manipulator
 #else
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
+    moveit::planning_interface::MoveGroup *finger_group;
+    finger_group = new moveit::planning_interface::MoveGroup("gripper");
 #endif
     geometry_msgs::Pose targetPose;	//定义抓取位姿
     geometry_msgs::Point point;
     geometry_msgs::Quaternion orientation;
-
-
-    moveit::planning_interface::MoveGroup *finger_group;
-    finger_group = new moveit::planning_interface::MoveGroup("gripper");
  
 #ifdef UR5
 //ur5手爪的动作
@@ -407,7 +405,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //前往抓取点
     moveit_msgs::RobotTrajectory trajectory1;
     arm_group.computeCartesianPath(pickWayPoints,
-                                   0.01,  // eef_step
+                                   0.02,  // eef_step
                                    0.0,   // jump_threshold
                                    trajectory1);
 
@@ -442,7 +440,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //前往放置点
     moveit_msgs::RobotTrajectory trajectory2;
     arm_group.computeCartesianPath(placeWayPoints,
-                                   0.01,  // eef_step
+                                   0.02,  // eef_step
                                    0.0,   // jump_threshold
                                    trajectory2);
     place_plan.trajectory_ = trajectory2;
@@ -479,9 +477,6 @@ std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,g
     //插值后路径为＂----|＂形（先平移，后下落）
     std::vector<geometry_msgs::Pose> pickWayPoints;
 
-    geometry_msgs::Pose midPose1;
-    geometry_msgs::Pose midPose2;
-    geometry_msgs::Pose midPose3;
     geometry_msgs::Pose midPose4;
 
     geometry_msgs::Point startPoint;
@@ -490,36 +485,6 @@ std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,g
 
     startPoint = startPose.position;
     targetPoint = targetPose.position;
-
-    // midPose1
-    midPoint.x = startPoint.x + 0.25 * (targetPoint.x - startPoint.x);
-    midPoint.y = startPoint.y + 0.25 * (targetPoint.y - startPoint.y);
-    midPoint.z = startPoint.z;
-
-    midPose1.position = midPoint;
-    midPose1.orientation = targetPose.orientation;
-
-    pickWayPoints.push_back(midPose1);
-
-    // midPose2
-    midPoint.x = startPoint.x + 0.5 * (targetPoint.x - startPoint.x);
-    midPoint.y = startPoint.y + 0.5 * (targetPoint.y - startPoint.y);
-    midPoint.z = startPoint.z;
-
-    midPose2.position = midPoint;
-    midPose2.orientation = targetPose.orientation;
-
-    pickWayPoints.push_back(midPose2);
-
-    // midPose3
-    midPoint.x = startPoint.x + 0.75 * (targetPoint.x - startPoint.x);
-    midPoint.y = startPoint.y + 0.75 * (targetPoint.y - startPoint.y);
-    midPoint.z = startPoint.z;
-
-    midPose3.position = midPoint;
-    midPose3.orientation = targetPose.orientation;
-
-    pickWayPoints.push_back(midPose3);
 
     // midPose4
     midPoint.x = targetPoint.x;
@@ -545,9 +510,6 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
     //插值后路径为＂|----＂形（先抬升，后平移）
     std::vector<geometry_msgs::Pose> placeWayPoints;
     geometry_msgs::Pose midPose1;
-    geometry_msgs::Pose midPose2;
-    geometry_msgs::Pose midPose3;
-    geometry_msgs::Pose midPose4;
 
     geometry_msgs::Point startPoint;
     geometry_msgs::Point targetPoint;
@@ -565,36 +527,6 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
     midPose1.orientation = targetPose.orientation;
 
     placeWayPoints.push_back(midPose1);
-
-    // midPose2
-    midPoint.x = startPoint.x + 0.25 * (targetPoint.x - startPoint.x);
-    midPoint.y = startPoint.y + 0.25 * (targetPoint.y - startPoint.y);
-    midPoint.z = targetPoint.z;
-
-    midPose2.position = midPoint;
-    midPose2.orientation = targetPose.orientation;
-
-    placeWayPoints.push_back(midPose2);
-
-    // midPose3
-    midPoint.x = startPoint.x + 0.5 * (targetPoint.x - startPoint.x);
-    midPoint.y = startPoint.y + 0.5 * (targetPoint.y - startPoint.y);
-    midPoint.z = targetPoint.z;
-
-    midPose3.position = midPoint;
-    midPose3.orientation = targetPose.orientation;
-
-    placeWayPoints.push_back(midPose3);
-
-    // midPose4
-    midPoint.x = startPoint.x + 0.75 * (targetPoint.x - startPoint.x);
-    midPoint.y = startPoint.y + 0.75 * (targetPoint.y - startPoint.y);
-    midPoint.z = targetPoint.z;
-
-    midPose4.position = midPoint;
-    midPose4.orientation = targetPose.orientation;
-
-    placeWayPoints.push_back(midPose4);
 
     // Give targetPose
     placeWayPoints.push_back(targetPose);
@@ -624,10 +556,18 @@ void goPlacePose(geometry_msgs::Pose placePose)
 {
 #ifdef UR5
     moveit::planning_interface::MoveGroup arm_group("manipulator");	//manipulator
+    std::vector< double > jointValues;
+    jointValues.push_back(-2.2060);
+    jointValues.push_back(-1.1585);
+    jointValues.push_back(1.6832);
+    jointValues.push_back(-2.0955);
+    jointValues.push_back(-1.5708);
+    jointValues.push_back(-0.6352);
+    arm_group.setJointValueTarget(jointValues);
 #else
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
-#endif
     arm_group.setPoseTarget(placePose);
+#endif
     arm_group.move();
 }
 
