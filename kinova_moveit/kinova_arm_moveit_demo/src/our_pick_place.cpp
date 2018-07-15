@@ -23,11 +23,13 @@
 #include "kinova_arm_moveit_demo/targetState.h"	//自定义消息类型，单个识别定位结果
 #include "rviz_teleop_commander/targets_tag.h"		//自定义消息类型，传递要抓取的目标标签 qcrong20180430
 #include "rviz_teleop_commander/grab_result.h"		//自定义消息类型，传递当前抓取的目标标签和抓取次数 qcrong20180430
+#include <Eigen/Eigen>
 
 #define Simulation 1     //仿真为1，实物为0
 //#define UR5		//使用ur5
 
 using namespace std;
+using namespace Eigen;
 
 //手指client类型自定义
 typedef actionlib::SimpleActionClient<kinova_msgs::SetFingersPositionAction> Finger_actionlibClient;
@@ -48,6 +50,10 @@ string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action
 
 //定义手指控制client added by yang 20180418
 Finger_actionlibClient* client=NULL;
+
+//手眼关系
+Eigen::Matrix3d base2eye_r;
+Eigen::Vector3d base2eye_t;
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 //bool getTags();
@@ -86,7 +92,7 @@ int main(int argc, char **argv)
 	//等待rviz启动，最后集成用一个launch文件启动时需要
 	//ros::Duration(10.0).sleep();
 
-        client = new Finger_actionlibClient(Finger_action_address, true);
+    client = new Finger_actionlibClient(Finger_action_address, true);
 
 	//实物控制的话，可删掉这两句－－删掉是为了减少Rviz的使用所占用的时间
 	ros::Publisher display_publisher = node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
@@ -110,6 +116,13 @@ int main(int argc, char **argv)
 
 	int n=0;		//记录对同一目标抓取的次数
 	std_msgs::Int8 detectTarget;
+	//手眼关系赋值
+	//手眼关系
+	base2eye_r<<-0.9986887682233349, -0.006593419003215136, 0.05076683021823088,
+	-0.04895269615566554, 0.4131617137932073, -0.9093409876358548,
+	-0.01497924442853263, -0.9106338040515016, -0.4129427286622718;
+
+	base2eye_t<<-0.09361975604009609,1.492012964653509,0.2925281209309303;
 	
 	/*************************************/
 	/********目标输入*********************/
@@ -277,7 +290,16 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 	{
 		if(targets[i].tag==targetsTag[cur_target] && n<n_MAX)
 		{
-			curTargetPoint=targets[i];		//获取当前抓取物品的位置
+			//目标物在相机坐标系下的坐标转机器人坐标系下的坐标
+			Eigen::Vector3d cam_center3d, base_center3d;
+			cam_center3d(0)=targets[i].x;
+			cam_center3d(1)=targets[i].y;
+			cam_center3d(2)=targets[i].z;
+			base_center3d=base2eye_r*cam_center3d+base2eye_t;
+			//获取当前抓取物品的位置
+			curTargetPoint.x=base_center3d(0);
+            curTargetPoint.y=base_center3d(1);
+			curTargetPoint.z=base_center3d(2);		
 			ROS_INFO("have goal 1");
 			return 1;
 		}
