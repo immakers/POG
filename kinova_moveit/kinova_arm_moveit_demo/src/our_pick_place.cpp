@@ -26,7 +26,7 @@
 #include <Eigen/Eigen>
 
 #define Simulation 1     //仿真为1，实物为0
-#define UR5		//使用ur5
+//#define UR5		//使用ur5
 
 using namespace std;
 using namespace Eigen;
@@ -118,11 +118,11 @@ int main(int argc, char **argv)
 	std_msgs::Int8 detectTarget;
 	//手眼关系赋值
 	//手眼关系
-	base2eye_r<<-0.9986887682233349, -0.006593419003215136, 0.05076683021823088,
-	-0.04895269615566554, 0.4131617137932073, -0.9093409876358548,
-	-0.01497924442853263, -0.9106338040515016, -0.4129427286622718;
+	base2eye_r<<0.9992458970856849, -0.03882390135053305, -0.000584672000904507,
+  -0.03657421626484855, -0.9461861203633413, 0.3215496110033137,
+  -0.01303701890911588, -0.321285745584354, -0.9468925524167304;
 
-	base2eye_t<<-0.09361975604009609,1.492012964653509,0.2925281209309303;
+	base2eye_t<<-0.01411807604080348,-0.7148707993899566,0.5948520927855322;
 	
 	/*************************************/
 	/********目标输入*********************/
@@ -301,6 +301,11 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
             curTargetPoint.y=base_center3d(1);
 			curTargetPoint.z=base_center3d(2);		
 			ROS_INFO("have goal 1");
+			for(int i=0;i<3;i++)
+			{
+				ROS_INFO("%f %f %f",base_center3d(i,0),base_center3d(i,1),base_center3d(i,2));	
+			}
+			ROS_INFO("%f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
 			return 1;
 		}
 	}
