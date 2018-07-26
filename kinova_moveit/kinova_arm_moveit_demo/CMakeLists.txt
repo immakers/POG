@@ -17,6 +17,7 @@ find_package(catkin REQUIRED
              rospy
              std_msgs
              message_generation
+			 robotiq_c_model_control
 )
 
 find_package(Boost REQUIRED system filesystem date_time thread)
