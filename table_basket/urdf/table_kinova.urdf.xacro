@@ -181,7 +181,7 @@
   <joint name="camera_fix" type="fixed">
     <parent link="root" />
     <child link="camera_base_link" />
-    <origin rpy="0.0 1.57 -1.57" xyz="0.0 0.65 0.8"/>
+    <origin rpy="0.0 1.57 -1.57" xyz="-0.32 0.62 0.8"/>
   </joint>
 
 <!-- gazebo -->

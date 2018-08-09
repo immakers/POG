@@ -36,8 +36,7 @@ geometry_msgs::Pose get_current_pose(moveit::planning_interface::MoveGroup &grou
   current_pose = getPoseMsg.pose;
 
 	ROS_INFO("Current position :\n x[%f], y[%f], z[%f]", current_pose.position.x, current_pose.position.y, current_pose.position.z);
-	ROS_INFO("Current orientation :\n x[%f], y[%f], z[%f], w[%f]", current_pose.orientation.x, current_pose.orientation.y,
-																															 current_pose.orientation.z, current_pose.orientation.w);
+	ROS_INFO("Current orientation :\n x[%f], y[%f], z[%f], w[%f]", current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
   return current_pose;
 }
 
