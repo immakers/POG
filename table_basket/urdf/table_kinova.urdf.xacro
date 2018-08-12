@@ -179,50 +179,55 @@
   </joint>
 
   <joint name="camera_fix" type="fixed">
-    <parent link="root" />
+    <parent link="j2s7s300_link_base" />
     <child link="camera_base_link" />
     <origin rpy="0.0 1.57 -1.57" xyz="-0.32 0.62 0.8"/>
   </joint>
 
-<!-- gazebo -->
+<!-- camera -->
   <gazebo reference="camera_rgb_frame">
     <sensor type="depth" name="camera">
-      <always_on>true</always_on>
-      <update_rate>15.0</update_rate>
-      <camera>
-        <horizontal_fov>1.047197</horizontal_fov>
-        <image>  
-         <!-- openni_kinect plugin works only with BGR8 -->
-          <format>B8G8R8</format>
-          <width>800</width>
-          <height>800</height>
-        </image>
-        <clip>
-          <near>0.05</near>
-          <far>50</far>
-        </clip>
-      </camera>
-    <plugin name="camera_link_controller" filename="libgazebo_ros_openni_kinect.so">
-      <baseline>0.1</baseline>
-      <alwaysOn>true</alwaysOn>
-      <updateRate>15.0</updateRate>
-      <cameraName>kinect</cameraName>
-      <imageTopicName>/kinect2/qhd/image_color_rect</imageTopicName>
-      <cameraInfoTopicName>/kinect2/qhd/camera_info</cameraInfoTopicName>			<!-- /kinect2/qhd/camera_info -->
-      <depthImageTopicName>/kinect2/qhd/image_depth_rect</depthImageTopicName>
-      <depthImageCameraInfoTopicName>/kinect/rgb/camera_info</depthImageCameraInfoTopicName>     <!-- /kinect2/qhd/camera_info -->
-      <pointCloudTopicName>/kinect/rgb/points</pointCloudTopicName>
-      <frameName>camera_rgb_optical_frame</frameName>
-      <pointCloudCutoff>0.35</pointCloudCutoff>
-      <pointCloudCutoffMax>4.5</pointCloudCutoffMax>
-      <CxPrime>0</CxPrime>
-      <Cx>0</Cx>
-      <Cy>0</Cy>
-      <focalLength>0</focalLength>
-      <hackBaseline>0</hackBaseline>
-    </plugin>
-   </sensor>
-  </gazebo> 
+        <always_on>1</always_on>
+        <visualize>true</visualize>             
+        <camera>
+            <horizontal_fov>1.047</horizontal_fov>  
+            <image>
+                <width>640</width>
+                <height>480</height>
+                <format>B8G8R8</format>
+            </image>
+            <depth_camera>
+
+            </depth_camera>
+            <clip>
+                <near>0.1</near>
+                <far>100</far>
+            </clip>
+        </camera>
+             <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
+             <alwaysOn>true</alwaysOn>
+                <updateRate>10.0</updateRate>
+                <cameraName>kinect2</cameraName>
+                <frameName>camera_link</frameName>                   
+            <imageTopicName>qhd/image_color_rect</imageTopicName>
+            <depthImageTopicName>qhd/image_depth_rect</depthImageTopicName>
+            <pointCloudTopicName>depth/points</pointCloudTopicName>
+            <cameraInfoTopicName>qhd/camera_info</cameraInfoTopicName>              
+            <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>            
+            <pointCloudCutoff>0.4</pointCloudCutoff>                
+                <hackBaseline>0.07</hackBaseline>
+                <distortionK1>0.0</distortionK1>
+                <distortionK2>0.0</distortionK2>
+                <distortionK3>0.0</distortionK3>
+                <distortionT1>0.0</distortionT1>
+                <distortionT2>0.0</distortionT2>
+            <CxPrime>0.0</CxPrime>
+            <Cx>0.0</Cx>
+            <Cy>0.0</Cy>
+            <focalLength>0.0</focalLength>
+            </plugin>
+    </sensor>
+  </gazebo>
 
 <!-- color -->
   <gazebo reference="table">
