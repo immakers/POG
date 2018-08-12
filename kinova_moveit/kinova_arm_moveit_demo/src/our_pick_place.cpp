@@ -55,6 +55,7 @@ Finger_actionlibClient* client=NULL;
 //手眼关系
 Eigen::Matrix3d base2eye_r;
 Eigen::Vector3d base2eye_t;
+Eigen::Quaterniond base2eye_q;
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 //bool getTags();
@@ -120,11 +121,11 @@ int main(int argc, char **argv)
 	std_msgs::Int8 detectTarget;
 	//手眼关系赋值
 	//手眼关系
-	base2eye_r<<0.9972514277037777, -0.04687474255096129, 0.05737898965264326,
-                -0.05950762379290415, -0.9681063256948148, 0.2433700574438165, 
-                0.04414105405740991, -0.2461156245760625, -0.9682348200133247;
-
-	base2eye_t<<-0.00657070285772457,-0.8888390237608956,0.5953071046884454;
+	base2eye_r<<0.9997841054726696, 0.0191326360357513, 0.008104608722121626,
+  0.01915621525684779, -0.9998124642538407, -0.002841784597192715,
+  0.008048717987887574, 0.00299642470070339, -0.9999631191087825;
+	base2eye_t<<0.0879734315946708,-0.7798333129612313,0.9276945301388835;
+	base2eye_q=base2eye_r;
 	
 	/*************************************/
 	/********目标输入*********************/
@@ -305,14 +306,20 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 			cam_center3d(1)=targets[i].y;
 			cam_center3d(2)=targets[i].z;
 			base_center3d=base2eye_r*cam_center3d+base2eye_t;
+			Eigen::Quaterniond quater(targets[i].qw,targets[i].qx,targets[i].qy,targets[i].qz);
+			quater=base2eye_q*quater;
 			//获取当前抓取物品的位置
 			curTargetPoint.x=base_center3d(0);
             curTargetPoint.y=base_center3d(1);
-			curTargetPoint.z=base_center3d(2);		
+			curTargetPoint.z=base_center3d(2);	
+			curTargetPoint.qx=quater.x();	
+			curTargetPoint.qy=quater.y();
+			curTargetPoint.qz=quater.z();
+			curTargetPoint.qw=quater.w();
 			ROS_INFO("have goal 1");
 			ROS_INFO("%d",targets[i].tag);
             //ROS_INFO("%f %f %f",cam_center3d(0),cam_center3d(1),cam_center3d(2));
-			ROS_INFO("%f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
+			ROS_INFO("%f %f %f %f",curTargetPoint.qx,curTargetPoint.qy,curTargetPoint.qz,curTargetPoint.qw);
 			return 1;
 		}
 	}
@@ -392,15 +399,20 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     point.x = curTargetPoint.x;//获取抓取位姿
     point.y = curTargetPoint.y;
     //point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
-	point.z =0.19;
+	point.z =0.2;
 
     moveit::planning_interface::MoveGroup::Plan pick_plan;
     moveit::planning_interface::MoveGroup::Plan place_plan;
 
-    orientation.x = 1;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
+	orientation.x = 1;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     orientation.y = 0;
     orientation.z = 0;
-    orientation.w = 0;
+    orientation.w = 0;	
+
+    //orientation.x = curTargetPoint.qx;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
+    //orientation.y = curTargetPoint.qy;
+    //orientation.z = curTargetPoint.qz;
+    //orientation.w = curTargetPoint.qw;
 
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
@@ -603,15 +615,27 @@ geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose)
     z_init = pose.orientation.z;
     w_init = pose.orientation.w;
 
+	Eigen::Quaterniond q_init(pose.orientation.w,pose.orientation.x,pose.orientation.y,pose.orientation.z);
+	Eigen::Quaterniond q_x180(0,1,0,0);
+	Eigen::Quaterniond q_y270(0.707,0,-0.707,0);
+	Eigen::Quaterniond q_z270(0.707,0,0,-0.707);
+	Eigen::Quaterniond q_trans=q_z270*q_x180*q_y270*q_init;
+
     x_x180 = 1;
     y_x180 = 0;
     z_x180 = 0;
     w_x180 = 0;
 
+
     x_y270 = 0;
     y_y270 = -0.707;
     z_y270 = 0;
     w_y270 = 0.707;
+
+	//x_z_90 = 0;
+    //y_z_90 = 0;
+    //z_z_90 = -0.707;
+    //w_z_90 = 0.707;
 
     // init and y270
     w_mid = z_init*z_y270 - x_init*x_y270 - y_init*y_y270 - z_init*z_y270;
@@ -625,11 +649,18 @@ geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose)
     y_trans = w_mid*y_x180 + y_mid*w_x180 + x_mid*z_x180 - z_mid*x_x180;
     z_trans = w_mid*z_x180 + z_mid*w_x180 + y_mid*x_x180 - x_mid*y_x180;
 
+	
+
     // so...
-    pose.orientation.x = x_trans;
-    pose.orientation.y = y_trans;
-    pose.orientation.z = z_trans;
-    pose.orientation.w = w_trans;
+    //pose.orientation.x = x_trans;
+    //pose.orientation.y = y_trans;
+    //pose.orientation.z = z_trans;
+    //pose.orientation.w = w_trans;
+
+	pose.orientation.x = q_trans.x();
+    pose.orientation.y = q_trans.y();
+    pose.orientation.z = q_trans.z();
+    pose.orientation.w = q_trans.w();
 
     return pose;
 }
