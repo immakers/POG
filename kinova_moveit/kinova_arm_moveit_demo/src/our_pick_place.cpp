@@ -27,7 +27,13 @@
 #include "robotiq_c_model_control/gripperControl.h"  //robotiq二指手
 
 #define Simulation 1     //仿真为1，实物为0
-#define UR5		//使用ur5
+//#define UR5		//使用ur5
+
+//相机参数和深度信息用于计算
+#define Fxy 692.97839
+#define UV0 400.5
+#define Zw 0.77
+ 
 
 using namespace std;
 using namespace Eigen;
@@ -121,11 +127,27 @@ int main(int argc, char **argv)
 	std_msgs::Int8 detectTarget;
 	//手眼关系赋值
 	//手眼关系
-	base2eye_r<<0.9997841054726696, 0.0191326360357513, 0.008104608722121626,
-  0.01915621525684779, -0.9998124642538407, -0.002841784597192715,
-  0.008048717987887574, 0.00299642470070339, -0.9999631191087825;
-	base2eye_t<<0.0879734315946708,-0.7798333129612313,0.9276945301388835;
-	base2eye_q=base2eye_r;
+	if(Simulation)
+	{
+		base2eye_r<<-1, 0, 0,
+  					0, 1, 0,
+  					0, 0, -1;
+		base2eye_t<<-0.33,0.58,0.8;
+		base2eye_q=base2eye_r;
+	}
+	else
+	{
+		base2eye_r<<0.9997841054726696, 0.0191326360357513, 0.008104608722121626,
+  				0.01915621525684779, -0.9998124642538407, -0.002841784597192715,
+  				0.008048717987887574, 0.00299642470070339, -0.9999631191087825;
+		base2eye_t<<0.0879734315946708,-0.7798333129612313,0.9276945301388835;
+		base2eye_q=base2eye_r;
+	}
+	
+	// 设置放置位置
+    setPlacePose();
+    // 前往放置位置
+    goPlacePose(placePose);
 	
 	/*************************************/
 	/********目标输入*********************/
@@ -161,10 +183,6 @@ int main(int argc, char **argv)
 	/*************************************/
 	/********目标抓取*********************/
 	/*************************************/
-    // 设置放置位置
-    setPlacePose();
-    // 前往放置位置
-    goPlacePose(placePose);
 #ifdef UR5
 	gripperPubPtr = &gripperPub;
 	initializeGripperMsg();
@@ -302,24 +320,39 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 		{
 			//目标物在相机坐标系下的坐标转机器人坐标系下的坐标
 			Eigen::Vector3d cam_center3d, base_center3d;
-			cam_center3d(0)=targets[i].x;
-			cam_center3d(1)=targets[i].y;
-			cam_center3d(2)=targets[i].z;
+			//仿真计算
+			if(Simulation)
+			{
+				cam_center3d(0)=(targets[i].px-UV0)*Zw/Fxy;
+				cam_center3d(1)=(targets[i].py-UV0)*Zw/Fxy;
+				cam_center3d(2)=Zw;
+				ROS_INFO("px py: %d %d",targets[i].px,targets[i].py);
+				ROS_INFO("cam_center3d: %f %f %f",cam_center3d(0),cam_center3d(1),cam_center3d(2));
+			}
+			else 
+			{
+				cam_center3d(0)=targets[i].x;
+				cam_center3d(1)=targets[i].y;
+				cam_center3d(2)=targets[i].z;
+			} 			
 			base_center3d=base2eye_r*cam_center3d+base2eye_t;
 			Eigen::Quaterniond quater(targets[i].qw,targets[i].qx,targets[i].qy,targets[i].qz);
 			quater=base2eye_q*quater;
 			//获取当前抓取物品的位置
 			curTargetPoint.x=base_center3d(0);
             curTargetPoint.y=base_center3d(1);
-			curTargetPoint.z=base_center3d(2);	
+			curTargetPoint.z=base_center3d(2);
+			ROS_INFO("curTargetPoint: %f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
+			//curTargetPoint.x=-0.27;
+            //curTargetPoint.y=0.5;
+	
 			curTargetPoint.qx=quater.x();	
 			curTargetPoint.qy=quater.y();
 			curTargetPoint.qz=quater.z();
 			curTargetPoint.qw=quater.w();
 			ROS_INFO("have goal 1");
 			ROS_INFO("%d",targets[i].tag);
-            //ROS_INFO("%f %f %f",cam_center3d(0),cam_center3d(1),cam_center3d(2));
-			ROS_INFO("%f %f %f %f",curTargetPoint.qx,curTargetPoint.qy,curTargetPoint.qz,curTargetPoint.qw);
+			//ROS_INFO("%f %f %f %f",curTargetPoint.qx,curTargetPoint.qy,curTargetPoint.qz,curTargetPoint.qw);
 			return 1;
 		}
 	}
@@ -399,7 +432,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     point.x = curTargetPoint.x;//获取抓取位姿
     point.y = curTargetPoint.y;
     //point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
-	point.z =0.2;
+	point.z =0.05;
 
     moveit::planning_interface::MoveGroup::Plan pick_plan;
     moveit::planning_interface::MoveGroup::Plan place_plan;
@@ -458,6 +491,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     //抓取完毕
 #endif
+	ros::Duration(1.0).sleep();
 
     //放置插值
     std::vector<geometry_msgs::Pose> placeWayPoints;
@@ -561,9 +595,9 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
 }
 void setPlacePose()
 {
-    placePose.position.x = -0.56;
-    placePose.position.y = -0.52;
-    placePose.position.z = 0.3;
+    placePose.position.x = 0.27;  //-0.56;
+    placePose.position.y = 0.5;   //-0.52;
+    placePose.position.z = 0.2;   //0.3;
     placePose.orientation.x = 1;
     placePose.orientation.y = 0;
     placePose.orientation.z = 0;
@@ -592,7 +626,16 @@ void goPlacePose(geometry_msgs::Pose placePose)
     arm_group.setJointValueTarget(jointValues);
 #else
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
-    arm_group.setPoseTarget(placePose);
+	std::vector< double > jointValues;
+    jointValues.push_back(-0.5358);
+    jointValues.push_back(1.9132);
+    jointValues.push_back(14.1402);
+    jointValues.push_back(1.93984);
+    jointValues.push_back(-33.3088);
+    jointValues.push_back(1.4479);
+    jointValues.push_back(-1.75747);
+    arm_group.setJointValueTarget(jointValues);
+    //arm_group.setPoseTarget(placePose);
 #endif
     arm_group.move();
 }
