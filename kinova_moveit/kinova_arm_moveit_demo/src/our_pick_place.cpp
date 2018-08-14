@@ -132,7 +132,7 @@ int main(int argc, char **argv)
 		base2eye_r<<-1, 0, 0,
   					0, 1, 0,
   					0, 0, -1;
-		base2eye_t<<-0.33,0.58,0.8;
+		base2eye_t<<0.32,0.58,0.8;
 		base2eye_q=base2eye_r;
 	}
 	else
@@ -595,8 +595,8 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
 }
 void setPlacePose()
 {
-    placePose.position.x = 0.27;  //-0.56;
-    placePose.position.y = 0.5;   //-0.52;
+    placePose.position.x = -0.2;  //-0.56;
+    placePose.position.y = 0.45;   //-0.52;
     placePose.position.z = 0.2;   //0.3;
     placePose.orientation.x = 1;
     placePose.orientation.y = 0;
@@ -627,13 +627,13 @@ void goPlacePose(geometry_msgs::Pose placePose)
 #else
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
 	std::vector< double > jointValues;
-    jointValues.push_back(-0.5358);
-    jointValues.push_back(1.9132);
-    jointValues.push_back(14.1402);
-    jointValues.push_back(1.93984);
-    jointValues.push_back(-33.3088);
-    jointValues.push_back(1.4479);
-    jointValues.push_back(-1.75747);
+    jointValues.push_back(-1.85898);
+    jointValues.push_back(2.55679);
+    jointValues.push_back(2.97745);
+    jointValues.push_back(1.61764);
+    jointValues.push_back(9.52694);
+    jointValues.push_back(2.0954);
+    jointValues.push_back(-20.89891);
     arm_group.setJointValueTarget(jointValues);
     //arm_group.setPoseTarget(placePose);
 #endif

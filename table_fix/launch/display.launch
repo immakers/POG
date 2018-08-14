@@ -6,7 +6,7 @@
     default="False" />
   <param
     name="robot_description"
-    textfile="$(find table_fix)/urdf/table_fix.urdf" />
+    textfile="$(find table_fix)/robots/table_fix.urdf" />
   <param
     name="use_gui"
     value="$(arg gui)" />
