@@ -6,23 +6,24 @@
 
   <!-- include urdf -->
   <xacro:include filename="$(find kinova_description)/urdf/j2s7s300_standalone.xacro" />
-  <xacro:include filename="$(find table_basket)/urdf/kinect_box.urdf.xacro" />
+  <xacro:include filename="$(find table_basket_new)/urdf/kinect_box.urdf.xacro" />
 
   <!-- define the table and baskets-->
-  <link name="table">
+  <link
+    name="table">
     <inertial>
       <origin
-        xyz="0 0 0"
+        xyz="3.296E-17 -0.0068419 -0.20655"
         rpy="0 0 0" />
       <mass
-        value="81.416" />
+        value="83.702" />
       <inertia
-        ixx="17.674"
-        ixy="-4.3368E-16"
-        ixz="4.9467E-16"
-        iyy="17.674"
-        iyz="1.3081E-17"
-        izz="19.456" />
+        ixx="19.272"
+        ixy="1.1981E-15"
+        ixz="-5.4509E-15"
+        iyy="19.55"
+        iyz="0.40239"
+        izz="19.98" />
     </inertial>
     <visual>
       <origin
@@ -30,14 +31,14 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://table_basket/meshes/table.STL" />
+          filename="package://table_fix/meshes/table.STL" />
       </geometry>
       <material
         name="">
         <color
           rgba="1 1 1 1" />
         <texture
-          filename="package://table_basket/textures/table_color.jpg" />
+          filename="package://table_fix/textures/table_color.jpg" />
       </material>
     </visual>
     <collision>
@@ -46,40 +47,40 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://table_basket/meshes/table.STL" />
+          filename="package://table_fix/meshes/table.STL" />
       </geometry>
     </collision>
   </link>
-
-  <link name="left_basket">
+  <link
+    name="left_basket">
     <inertial>
       <origin
-        xyz="-1.1102E-16 0 0.031586"
+        xyz="0.0 0.0 0.021353"
         rpy="0 0 0" />
       <mass
-        value="18.812" />
+        value="2.5011" />
       <inertia
-        ixx="0.029288"
-        ixy="-2.2695E-18"
-        ixz="-2.6278E-18"
-        iyy="0.01841"
-        iyz="2.5457E-20"
-        izz="0.04459" />
+        ixx="0.040801"
+        ixy="1.106E-17"
+        ixz="-1.2189E-17"
+        iyy="0.048536"
+        iyz="-1.8029E-17"
+        izz="0.085254" />
     </inertial>
     <visual>
       <origin
-        xyz="0 0 0"
+        xyz="0 0 0.01"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://table_basket/meshes/left_basket.STL" />
+          filename="package://table_fix/meshes/left_basket.STL" />
       </geometry>
       <material
         name="">
         <color
           rgba="1 1 1 1" />
         <texture
-          filename="package://table_basket/textures/blue.jpg" />
+          filename="package://table_fix/textures/green.jpg" />
       </material>
     </visual>
     <collision>
@@ -88,16 +89,15 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://table_basket/meshes/left_basket.STL" />
+          filename="package://table_fix/meshes/left_basket.STL" />
       </geometry>
     </collision>
   </link>
-
   <joint
-    name="left_fix"
+    name="left_fixed"
     type="fixed">
     <origin
-      xyz="0.27 0.275 0" 
+      xyz="0.245 -0.175 0"
       rpy="0 0 0" />
     <parent
       link="table" />
@@ -106,36 +106,36 @@
     <axis
       xyz="0 0 0" />
   </joint>
-
-  <link name="right_basket">
+  <link
+    name="right_basket">
     <inertial>
       <origin
-        xyz="0 -5.5511E-17 0.031586"
+        xyz="0.0 0.0 0.021353"
         rpy="0 0 0" />
       <mass
-        value="18.812" />
+        value="2.5011" />
       <inertia
-        ixx="0.029288"
-        ixy="1.3977E-18"
-        ixz="-3.7403E-18"
-        iyy="0.01841"
-        iyz="-5.7134E-19"
-        izz="0.04459" />
+        ixx="0.040801"
+        ixy="-1.9019E-19"
+        ixz="-1.0495E-17"
+        iyy="0.048536"
+        iyz="-1.4234E-17"
+        izz="0.085254" />
     </inertial>
     <visual>
       <origin
-        xyz="0 0 0"
+        xyz="0 0 0.01"
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://table_basket/meshes/right_basket.STL" />
+          filename="package://table_fix/meshes/right_basket.STL" />
       </geometry>
       <material
         name="">
         <color
           rgba="1 1 1 1" />
         <texture
-          filename="package://table_basket/textures/green.jpg" />
+          filename="package://table_fix/textures/blue.jpg" />
       </material>
     </visual>
     <collision>
@@ -144,16 +144,15 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://table_basket/meshes/right_basket.STL" />
+          filename="package://table_fix/meshes/right_basket.STL" />
       </geometry>
     </collision>
   </link>
-
   <joint
-    name="right_fix"
+    name="right_fixed"
     type="fixed">
     <origin
-      xyz="-0.27 0.275 0"
+      xyz="-0.245 -0.175 0"
       rpy="0 0 0" />
     <parent
       link="table" />
@@ -175,19 +174,19 @@
   <joint name="robot_fix" type="fixed">
     <parent link="table" />
     <child link = "root" />  
-    <origin rpy="0.0 0.0 0.0" xyz="0.0 -0.3 0.0"/>
+    <origin rpy="0.0 0.0 3.14" xyz="0.0 0.3 0.0"/>
   </joint>
 
   <joint name="camera_fix" type="fixed">
-    <parent link="j2s7s300_link_base" />
+    <parent link="root" />
     <child link="camera_base_link" />
-    <origin rpy="0.0 1.57 -1.57" xyz="-0.32 0.62 0.8"/>
+    <origin rpy="0 1.57 -1.57" xyz="0.34 0.51 0.8"/>
   </joint>
 
-<!-- camera -->
+<!-- gazebo -->
   <gazebo reference="camera_rgb_frame">
     <sensor type="depth" name="camera">
-        <always_on>1</always_on>
+      <always_on>1</always_on>
         <visualize>true</visualize>             
         <camera>
             <horizontal_fov>1.047</horizontal_fov>  

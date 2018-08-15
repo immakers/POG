@@ -25,9 +25,17 @@
 #include "rviz_teleop_commander/grab_result.h"		//自定义消息类型，传递当前抓取的目标标签和抓取次数 qcrong20180430
 #include <Eigen/Eigen>
 #include "robotiq_c_model_control/gripperControl.h"  //robotiq二指手
+//关节位置信息
+#include <sensor_msgs/JointState.h>
 
 #define Simulation 1     //仿真为1，实物为0
-#define UR5		//使用ur5
+//#define UR5		//使用ur5
+
+//相机参数和深度信息用于计算
+#define Fxy 692.97839
+#define UV0 400.5
+#define Zw 0.77
+ 
 
 using namespace std;
 using namespace Eigen;
@@ -56,6 +64,8 @@ Finger_actionlibClient* client=NULL;
 Eigen::Matrix3d base2eye_r;
 Eigen::Vector3d base2eye_t;
 Eigen::Quaterniond base2eye_q;
+//关节信息
+std::vector< double > jointValues_now(7);
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 //bool getTags();
@@ -79,6 +89,11 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
 void setPlacePose();
 //前往放置位置
 void goPlacePose(geometry_msgs::Pose placePose);
+//获取当前位置
+void jointStatusCB(const sensor_msgs::JointState &msg);
+//爪子开闭控制
+void fingerControl(float value);  //value值(0.2,1)，开闭
+
 // 转换位姿，用于控制UR实物
 geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose);
 
@@ -114,6 +129,7 @@ int main(int argc, char **argv)
 
 	ros::Subscriber detectResult_sub = node_handle.subscribe("detect_result", 1, detectResultCB);    //接收visual_detect检测结果
 	ros::Subscriber tags_sub = node_handle.subscribe("targets_tag", 1, tagsCB);				//接收要抓取的目标 qcrong
+	ros::Subscriber joint_status_sub = node_handle.subscribe("/j2s7s300/joint_states", 1, jointStatusCB);	//获取当前关节角
     
 	//ros::Duration(0.3).sleep();
 
@@ -121,11 +137,27 @@ int main(int argc, char **argv)
 	std_msgs::Int8 detectTarget;
 	//手眼关系赋值
 	//手眼关系
-	base2eye_r<<0.9997841054726696, 0.0191326360357513, 0.008104608722121626,
-  0.01915621525684779, -0.9998124642538407, -0.002841784597192715,
-  0.008048717987887574, 0.00299642470070339, -0.9999631191087825;
-	base2eye_t<<0.0879734315946708,-0.7798333129612313,0.9276945301388835;
-	base2eye_q=base2eye_r;
+	if(Simulation)
+	{
+		base2eye_r<<-1, 0, 0,
+  					0, 1, 0,
+  					0, 0, -1;
+		base2eye_t<<0.321,0.46,0.8;
+		base2eye_q=base2eye_r;
+	}
+	else
+	{
+		base2eye_r<<0.9960494930054732, 0.08865350459897035, 0.005095449525217566,
+  					0.08863064569634099, -0.996054169288991, 0.004549778617652745,
+  					0.005478697563598811, -0.004080191703869161, -0.9999766676821358;
+		base2eye_t<<0.07959135656162009,-0.7650566101705008,0.9265312081958853;
+		base2eye_q=base2eye_r;
+	}
+	
+	// 设置放置位置
+    setPlacePose();
+    // 前往放置位置
+    goPlacePose(placePose);
 	
 	/*************************************/
 	/********目标输入*********************/
@@ -161,10 +193,6 @@ int main(int argc, char **argv)
 	/*************************************/
 	/********目标抓取*********************/
 	/*************************************/
-    // 设置放置位置
-    setPlacePose();
-    // 前往放置位置
-    goPlacePose(placePose);
 #ifdef UR5
 	gripperPubPtr = &gripperPub;
 	initializeGripperMsg();
@@ -302,24 +330,43 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 		{
 			//目标物在相机坐标系下的坐标转机器人坐标系下的坐标
 			Eigen::Vector3d cam_center3d, base_center3d;
-			cam_center3d(0)=targets[i].x;
-			cam_center3d(1)=targets[i].y;
-			cam_center3d(2)=targets[i].z;
+			//仿真计算
+			if(Simulation)
+			{
+				cam_center3d(0)=(targets[i].px-UV0)*Zw/Fxy;
+				cam_center3d(1)=(targets[i].py-UV0)*Zw/Fxy;
+				cam_center3d(2)=Zw;
+				ROS_INFO("px py: %d %d",targets[i].px,targets[i].py);
+				ROS_INFO("cam_center3d: %f %f %f",cam_center3d(0),cam_center3d(1),cam_center3d(2));
+			}
+			else 
+			{
+				cam_center3d(0)=targets[i].x;
+				cam_center3d(1)=targets[i].y;
+				cam_center3d(2)=targets[i].z;
+			} 			
 			base_center3d=base2eye_r*cam_center3d+base2eye_t;
 			Eigen::Quaterniond quater(targets[i].qw,targets[i].qx,targets[i].qy,targets[i].qz);
 			quater=base2eye_q*quater;
+			//Eigen::Matrix3d tempm=quater.matrix();
+			//ROS_INFO("quater: %f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
+			//cout<<"tempm:"<<endl<<tempm<<endl;
+			
 			//获取当前抓取物品的位置
 			curTargetPoint.x=base_center3d(0);
             curTargetPoint.y=base_center3d(1);
-			curTargetPoint.z=base_center3d(2);	
+			curTargetPoint.z=base_center3d(2);
+			ROS_INFO("curTargetPoint: %f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
+			//curTargetPoint.x=-0.27;
+            //curTargetPoint.y=0.5;
+	
 			curTargetPoint.qx=quater.x();	
 			curTargetPoint.qy=quater.y();
 			curTargetPoint.qz=quater.z();
 			curTargetPoint.qw=quater.w();
 			ROS_INFO("have goal 1");
 			ROS_INFO("%d",targets[i].tag);
-            //ROS_INFO("%f %f %f",cam_center3d(0),cam_center3d(1),cam_center3d(2));
-			ROS_INFO("%f %f %f %f",curTargetPoint.qx,curTargetPoint.qy,curTargetPoint.qz,curTargetPoint.qw);
+			//ROS_INFO("%f %f %f %f",curTargetPoint.qx,curTargetPoint.qy,curTargetPoint.qz,curTargetPoint.qw);
 			return 1;
 		}
 	}
@@ -385,7 +432,12 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //抓取动作
     if(Simulation)
     {
-        finger_group->setNamedTarget("Open");   //仿真使用
+        //finger_group->setNamedTarget("Open");   //仿真使用
+		std::vector< double > jointValues;
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	finger_group->setJointValueTarget(jointValues);
 		finger_group->move();
     }
     else if(!Simulation)
@@ -399,20 +451,33 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     point.x = curTargetPoint.x;//获取抓取位姿
     point.y = curTargetPoint.y;
     //point.z = curTargetPoint.z;//这里等待实验测量结果－－－－－－－－－－－－－－－－－－修改为固定值－－－－－－周佩
-	point.z =0.2;
+	if(Simulation)
+	{
+		point.z =0.05;
+	}
+	else
+	{
+		point.z =0.17;
+	}
+	
 
     moveit::planning_interface::MoveGroup::Plan pick_plan;
     moveit::planning_interface::MoveGroup::Plan place_plan;
-
-	orientation.x = 1;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
-    orientation.y = 0;
-    orientation.z = 0;
-    orientation.w = 0;	
-
-    //orientation.x = curTargetPoint.qx;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
-    //orientation.y = curTargetPoint.qy;
-    //orientation.z = curTargetPoint.qz;
-    //orientation.w = curTargetPoint.qw;
+	
+	if(Simulation)
+	{
+		orientation.x = 1;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
+    	orientation.y = 0;
+    	orientation.z = 0;
+    	orientation.w = 0;
+	}
+	else
+	{
+		orientation.x = curTargetPoint.qx;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
+    	orientation.y = curTargetPoint.qy;
+    	orientation.z = curTargetPoint.qz;
+    	orientation.w = curTargetPoint.qw;
+	}
 
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
@@ -449,7 +514,13 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //抓取动作
     if(Simulation)
     {
-        finger_group->setNamedTarget("Close");   //仿真使用
+        //finger_group->setNamedTarget("Close");   //仿真使用
+		finger_group->move();
+		std::vector< double > jointValues;
+    	jointValues.push_back(0.9);
+    	jointValues.push_back(0.9);
+    	jointValues.push_back(0.9);
+    	finger_group->setJointValueTarget(jointValues);
 		finger_group->move();
     }
     else if(!Simulation)
@@ -458,6 +529,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     //抓取完毕
 #endif
+	ros::Duration(1.0).sleep();
 
     //放置插值
     std::vector<geometry_msgs::Pose> placeWayPoints;
@@ -484,7 +556,13 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //松开爪子
     if(Simulation)
     {
-    	finger_group->setNamedTarget("Open");   //仿真使用
+    	//finger_group->setNamedTarget("Open");   //仿真使用
+		finger_group->move();
+		std::vector< double > jointValues;
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	finger_group->setJointValueTarget(jointValues);
 		finger_group->move();
     }
     else if(!Simulation)
@@ -561,13 +639,24 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
 }
 void setPlacePose()
 {
-    placePose.position.x = -0.56;
-    placePose.position.y = -0.52;
-    placePose.position.z = 0.3;
+#ifdef UR5
+	placePose.position.x = -0.56;  //-0.56;
+    placePose.position.y = -0.52;   //-0.52;
+    placePose.position.z = 0.3;   //0.3;
     placePose.orientation.x = 1;
     placePose.orientation.y = 0;
     placePose.orientation.z = 0;
     placePose.orientation.w = 0;
+
+#else
+    placePose.position.x = -0.2; 
+    placePose.position.y = 0.45;   
+    placePose.position.z = 0.2;   
+    placePose.orientation.x = 1;
+    placePose.orientation.y = 0;
+    placePose.orientation.z = 0;
+    placePose.orientation.w = 0;
+#endif
 
 // 如果使用UR实物，请解除下面三行的注释
 #ifdef UR5
@@ -592,7 +681,16 @@ void goPlacePose(geometry_msgs::Pose placePose)
     arm_group.setJointValueTarget(jointValues);
 #else
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
-    arm_group.setPoseTarget(placePose);
+	std::vector< double > jointValues;
+    jointValues.push_back(-1.85898);
+    jointValues.push_back(2.55679);
+    jointValues.push_back(2.97745);
+    jointValues.push_back(1.61764);
+    jointValues.push_back(9.52694);
+    jointValues.push_back(2.0954);
+    jointValues.push_back(-20.89891);
+    arm_group.setJointValueTarget(jointValues);
+    //arm_group.setPoseTarget(placePose);
 #endif
     arm_group.move();
 }
@@ -664,3 +762,28 @@ geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose)
 
     return pose;
 }
+
+//获取当前位置
+void jointStatusCB(const sensor_msgs::JointState &msg)
+{
+	for(int i=0; i<7; i++)
+	{
+		jointValues_now[i]=msg.position[i];
+	}
+}
+//爪子开闭控制
+void fingerControl(float value)
+{
+	moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
+    std::vector< double > jointValues(10);
+	for(int i=0; i<7; i++)
+	{
+		jointValues[i]=jointValues_now[i];
+	}
+    jointValues[7]=value;
+	jointValues[8]=value;
+	jointValues[9]=value;
+    arm_group.setJointValueTarget(jointValues);
+	arm_group.move();
+}
+
