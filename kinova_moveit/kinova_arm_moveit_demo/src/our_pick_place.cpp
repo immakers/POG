@@ -25,6 +25,8 @@
 #include "rviz_teleop_commander/grab_result.h"		//自定义消息类型，传递当前抓取的目标标签和抓取次数 qcrong20180430
 #include <Eigen/Eigen>
 #include "robotiq_c_model_control/gripperControl.h"  //robotiq二指手
+//关节位置信息
+#include <sensor_msgs/JointState.h>
 
 #define Simulation 1     //仿真为1，实物为0
 //#define UR5		//使用ur5
@@ -62,6 +64,8 @@ Finger_actionlibClient* client=NULL;
 Eigen::Matrix3d base2eye_r;
 Eigen::Vector3d base2eye_t;
 Eigen::Quaterniond base2eye_q;
+//关节信息
+std::vector< double > jointValues_now(7);
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 //bool getTags();
@@ -85,6 +89,11 @@ std::vector<geometry_msgs::Pose> placeInterpolate(geometry_msgs::Pose startPose,
 void setPlacePose();
 //前往放置位置
 void goPlacePose(geometry_msgs::Pose placePose);
+//获取当前位置
+void jointStatusCB(const sensor_msgs::JointState &msg);
+//爪子开闭控制
+void fingerControl(float value);  //value值(0.2,1)，开闭
+
 // 转换位姿，用于控制UR实物
 geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose);
 
@@ -120,6 +129,7 @@ int main(int argc, char **argv)
 
 	ros::Subscriber detectResult_sub = node_handle.subscribe("detect_result", 1, detectResultCB);    //接收visual_detect检测结果
 	ros::Subscriber tags_sub = node_handle.subscribe("targets_tag", 1, tagsCB);				//接收要抓取的目标 qcrong
+	ros::Subscriber joint_status_sub = node_handle.subscribe("/j2s7s300/joint_states", 1, jointStatusCB);	//获取当前关节角
     
 	//ros::Duration(0.3).sleep();
 
@@ -422,7 +432,12 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //抓取动作
     if(Simulation)
     {
-        finger_group->setNamedTarget("Open");   //仿真使用
+        //finger_group->setNamedTarget("Open");   //仿真使用
+		std::vector< double > jointValues;
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	finger_group->setJointValueTarget(jointValues);
 		finger_group->move();
     }
     else if(!Simulation)
@@ -499,7 +514,13 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //抓取动作
     if(Simulation)
     {
-        finger_group->setNamedTarget("Close");   //仿真使用
+        //finger_group->setNamedTarget("Close");   //仿真使用
+		finger_group->move();
+		std::vector< double > jointValues;
+    	jointValues.push_back(0.9);
+    	jointValues.push_back(0.9);
+    	jointValues.push_back(0.9);
+    	finger_group->setJointValueTarget(jointValues);
 		finger_group->move();
     }
     else if(!Simulation)
@@ -535,7 +556,13 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     //松开爪子
     if(Simulation)
     {
-    	finger_group->setNamedTarget("Open");   //仿真使用
+    	//finger_group->setNamedTarget("Open");   //仿真使用
+		finger_group->move();
+		std::vector< double > jointValues;
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	jointValues.push_back(0.4);
+    	finger_group->setJointValueTarget(jointValues);
 		finger_group->move();
     }
     else if(!Simulation)
@@ -735,3 +762,28 @@ geometry_msgs::Pose changePoseForUR(geometry_msgs::Pose pose)
 
     return pose;
 }
+
+//获取当前位置
+void jointStatusCB(const sensor_msgs::JointState &msg)
+{
+	for(int i=0; i<7; i++)
+	{
+		jointValues_now[i]=msg.position[i];
+	}
+}
+//爪子开闭控制
+void fingerControl(float value)
+{
+	moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
+    std::vector< double > jointValues(10);
+	for(int i=0; i<7; i++)
+	{
+		jointValues[i]=jointValues_now[i];
+	}
+    jointValues[7]=value;
+	jointValues[8]=value;
+	jointValues[9]=value;
+    arm_group.setJointValueTarget(jointValues);
+	arm_group.move();
+}
+
