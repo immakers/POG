@@ -113,6 +113,10 @@ add_executable(finger_control src/finger_control.cpp)
 target_link_libraries(finger_control ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
 install(TARGETS finger_control DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})   #added by yang 20180417
 
+add_executable(finger_control_client src/finger_control_client.cpp)
+target_link_libraries(finger_control_client ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${kinova_driver_LIBRARIES})
+install(TARGETS finger_control_client DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})   #added by qcrong 20180815
+
 
 #get_cmake_property(_variableNames VARIABLES)
 #foreach (_variableName ${_variableNames})
