@@ -15,6 +15,7 @@
 
 #include <std_msgs/Int8.h>
 #include "kinova_arm_moveit_demo/toolposeChange.h"
+#include <geometry_msgs/PoseStamped.h>
 
 #define TF_EULER_DEFAULT_ZYX
 
@@ -26,7 +27,9 @@ const float rad2deg = 180.0 / M_PI;//用于将弧度转化为角度。deg = rad*
 moveit::planning_interface::MoveGroup* gripper_group_=NULL;
 geometry_msgs::Pose target_pose1;
 
-//获取当前位姿
+geometry_msgs::Pose tempPose;
+
+//获取当前位姿 
 geometry_msgs::Pose get_current_pose(moveit::planning_interface::MoveGroup &group)
 {
 	geometry_msgs::PoseStamped getPoseMsg;
@@ -37,6 +40,14 @@ geometry_msgs::Pose get_current_pose(moveit::planning_interface::MoveGroup &grou
 
 	ROS_INFO("Current position :\n x[%f], y[%f], z[%f]", current_pose.position.x, current_pose.position.y, current_pose.position.z);
 	ROS_INFO("Current orientation :\n x[%f], y[%f], z[%f], w[%f]", current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
+  return current_pose;
+}
+geometry_msgs::Pose get_current_pose()
+{
+  geometry_msgs::Pose current_pose;
+  current_pose = tempPose;
+  ROS_INFO("Current position :\n x[%f], y[%f], z[%f]", current_pose.position.x, current_pose.position.y, current_pose.position.z);
+  ROS_INFO("Current orientation :\n x[%f], y[%f], z[%f], w[%f]", current_pose.orientation.x, current_pose.orientation.y, current_pose.orientation.z, current_pose.orientation.w);
   return current_pose;
 }
 
@@ -144,6 +155,11 @@ Quaterniond  Euler_to_Quaterniond(double yaw, double pitching, double droll)
   return q;
 }
 
+void tool_pose_CB(const geometry_msgs::PoseStamped &msg)
+{
+	tempPose=msg.pose;
+}
+
 
 int main(int argc, char **argv)
 {
@@ -164,8 +180,11 @@ int main(int argc, char **argv)
 
   //发布的消息
   ros::Publisher signal_pub = node_handle.advertise<std_msgs::Int8>("hand_eye_arm_signal", 1);  //到达位姿后，发送标志位
-	ros::Publisher pose_change_pub = node_handle.advertise<kinova_arm_moveit_demo::toolposeChange>("hand_eye_arm_pose_change", 10);//发送末端位姿变化
-	ros::Publisher pose_pub = node_handle.advertise<kinova_arm_moveit_demo::toolposeChange>("hand_eye_arm_pose", 10);//发送末端位姿齐次变换矩阵
+  ros::Publisher pose_change_pub = node_handle.advertise<kinova_arm_moveit_demo::toolposeChange>("hand_eye_arm_pose_change", 10);//发送末端位姿变化
+  ros::Publisher pose_pub = node_handle.advertise<kinova_arm_moveit_demo::toolposeChange>("hand_eye_arm_pose", 10);//发送末端位姿齐次变换矩阵
+
+   //订阅话题
+  ros::Subscriber too_pose_sub = node_handle.subscribe("/j2s7s300_driver/out/tool_pose", 1, tool_pose_CB);    //接收visual_detect检测结果
 
 	sleep(3.0);
   //抓紧手指
@@ -185,16 +204,33 @@ int main(int argc, char **argv)
 	/****************************************************位姿0*****************************************************************/
 	/**************************************************************************************************************************/
 	ROS_INFO("STATE 0");
+
+	std::vector< double > jointValues(7);
+	jointValues[0]=-0.5808;
+	jointValues[1]=4.2017;
+	jointValues[2]=6.5925;
+	jointValues[3]=1.6936;
+	jointValues[4]=4.2819;
+	jointValues[5]=4.6534;
+	jointValues[6]=5.3834;
+    group.setJointValueTarget(jointValues);
+	group.move();
+
+	//geometry_msgs::Pose current_pose1;	//获取当前末端位姿
+	//current_pose1=get_current_pose(group);
+
+	//return 1;	
+/*
 	tf::Pose random_pose;
-  zyx[0]=0.3;
-  zyx[1]=-0.25;
-  zyx[2]=0.55;
+  zyx[0]=-0.481602;			//-0.481602  -0.3
+  zyx[1]=-0.546735;			//-0.546735  -0.25
+  zyx[2]=0.224044;			//0.224044   0.4
   random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
   //quater=Euler_to_Quaterniond(90,0,-90);
   //random_pose.setRotation(tf::Quaternion(quater.x(), quater.y(), quater.z(), quater.w()));
-  rpy[0]=-95*deg2rad;
-  rpy[1]=-70*deg2rad;
-  rpy[2]=-100*deg2rad;
+  rpy[0]=100*deg2rad;	//90    -95*deg2rad
+  rpy[1]=0*deg2rad;	//0     -70*deg2rad
+  rpy[2]=95*deg2rad;	//90	-100*deg2rad
   quaternion.setRPY(rpy[0], rpy[1], rpy[2]);   //设置初始值
   quaternion_add.setRPY(0,0,10*deg2rad);     //设置增量大小
   quaternion*=quaternion_add;
@@ -204,6 +240,7 @@ int main(int argc, char **argv)
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
+*/
 	int k=0;
 	while(k<5)
 	{
@@ -216,7 +253,8 @@ int main(int argc, char **argv)
 	}
 
 	geometry_msgs::Pose current_pose, old_pose;	//获取当前末端位姿
-	current_pose=get_current_pose(group);
+	//current_pose=get_current_pose(group);
+	current_pose=get_current_pose();
 	old_pose=current_pose;
 
   //发送标志位
@@ -228,6 +266,19 @@ int main(int argc, char **argv)
 	/****************************************************位姿1*****************************************************************/
 	/**************************************************************************************************************************/
 	ROS_INFO("STATE 1");
+
+	jointValues[0]=-0.5808;
+	jointValues[1]=4.2017;
+	jointValues[2]=6.5925;
+	jointValues[3]=1.6936;
+	jointValues[4]=4.2819;
+	jointValues[5]=4.6534;
+	jointValues[6]=5.3834;
+    group.setJointValueTarget(jointValues);
+	group.move();
+
+
+/*
   zyx[0]+=0.1;
   zyx[1]-=0.1;
 	random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
@@ -237,6 +288,8 @@ int main(int argc, char **argv)
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
+*/
+	
 	k=0;
 	while(k<5)
 	{
@@ -247,7 +300,8 @@ int main(int argc, char **argv)
 			sleep(1.0);
 			k++;
 	}
-	current_pose=get_current_pose(group);	//获取当前末端位姿
+	//current_pose=get_current_pose(group);	//获取当前末端位姿
+	current_pose=get_current_pose();
 	MatrixXd d_pose=MatrixXd::Zero(4, 4);	//位姿增量
 	d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
@@ -277,6 +331,18 @@ int main(int argc, char **argv)
 	/****************************************************位姿2*****************************************************************/
 	/**************************************************************************************************************************/
 	ROS_INFO("STATE 2");
+
+	jointValues[0]=-0.5808;
+	jointValues[1]=4.2017;
+	jointValues[2]=6.5925;
+	jointValues[3]=1.6936;
+	jointValues[4]=4.2819;
+	jointValues[5]=4.6534;
+	jointValues[6]=5.3834;
+    group.setJointValueTarget(jointValues);
+	group.move();
+
+/*
   zyx[0]+=0.05;
   zyx[2]+=0.1;
 	random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
@@ -287,6 +353,7 @@ int main(int argc, char **argv)
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
+*/
 	k=0;
 	while(k<5)
 	{
@@ -298,8 +365,9 @@ int main(int argc, char **argv)
 			k++;
 	}
 
-	current_pose=get_current_pose(group);	//获取当前末端位姿
-  d_pose=getPoseIncreasement(current_pose,old_pose);
+	//current_pose=get_current_pose(group);	//获取当前末端位姿
+	current_pose=get_current_pose();
+    d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
 
   //当前末端位姿
@@ -324,6 +392,17 @@ int main(int argc, char **argv)
 	/****************************************************位姿3*****************************************************************/
 	/**************************************************************************************************************************/
 	ROS_INFO("STATE 3");
+
+	jointValues[0]=-0.5808;
+	jointValues[1]=4.2017;
+	jointValues[2]=6.5925;
+	jointValues[3]=1.6936;
+	jointValues[4]=4.2819;
+	jointValues[5]=4.6534;
+	jointValues[6]=5.3834;
+    group.setJointValueTarget(jointValues);
+	group.move();
+/*
   zyx[0]-=0.1;
 	random_pose.setOrigin(tf::Vector3(zyx[0], zyx[1],  zyx[2]));
   quaternion_add.setRPY(5*deg2rad,0,-10*deg2rad);     //设置增量大小
@@ -333,6 +412,7 @@ int main(int argc, char **argv)
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
+*/
 	k=0;
 	while(k<5)
 	{
@@ -343,7 +423,8 @@ int main(int argc, char **argv)
 			sleep(1.0);
 			k++;
 	}
-	current_pose=get_current_pose(group);
+	//current_pose=get_current_pose(group);
+	current_pose=get_current_pose();
   d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
 
@@ -369,6 +450,17 @@ int main(int argc, char **argv)
 	/****************************************************位姿4*****************************************************************/
 	/**************************************************************************************************************************/
 	ROS_INFO("STATE 4");
+
+	jointValues[0]=-0.5808;
+	jointValues[1]=4.2017;
+	jointValues[2]=6.5925;
+	jointValues[3]=1.6936;
+	jointValues[4]=4.2819;
+	jointValues[5]=4.6534;
+	jointValues[6]=5.3834;
+    group.setJointValueTarget(jointValues);
+	group.move();
+/*
   zyx[0]-=0.05;
   zyx[1]+=0.1;
   zyx[2]+=0.1;
@@ -380,6 +472,8 @@ int main(int argc, char **argv)
 	tf::poseTFToMsg(random_pose, target_pose);
 	group.setPoseTarget(target_pose);
 	group.move();
+*/
+
 	k=0;
 	while(k<5)
 	{
@@ -391,7 +485,8 @@ int main(int argc, char **argv)
 			k++;
 	}
 
-	current_pose=get_current_pose(group);	//获取当前末端位姿
+	//current_pose=get_current_pose(group);	//获取当前末端位姿
+	current_pose=get_current_pose();
   d_pose=getPoseIncreasement(current_pose,old_pose);
 	old_pose=current_pose;
 
