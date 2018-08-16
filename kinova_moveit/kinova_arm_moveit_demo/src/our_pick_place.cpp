@@ -28,7 +28,7 @@
 //关节位置信息
 #include <sensor_msgs/JointState.h>
 
-#define Simulation 1     //仿真为1，实物为0
+#define Simulation 0     //仿真为1，实物为0
 //#define UR5		//使用ur5
 
 //相机参数和深度信息用于计算
@@ -69,8 +69,8 @@ float openVal=0.4;
 float closeVal=0.9;
 float highVal=0.05;
 //                    1      2     3     4     5     6     7     8     9    10
-float closeVals[10]={1.13, 0.96,  1.05, 1.1, 0.95, 0.95, 0.98, 0.95, 0.95, 0.95};
-float highVals[10]={0.058, 0.05, 0.05, 0.03, 0.05, 0.05, 0.02, 0.05, 0.05, 0.05};
+float closeVals[10]={1.30, 0.96,  1.05, 1.1, 1.20, 1.05, 0.96, 1.30, 0.95, 1.20};
+float highVals[10]={0.065, 0.05, 0.05, 0.03, 0.03, 0.03, 0.02, 0.065, 0.05, 0.03};
 
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
@@ -148,10 +148,10 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		base2eye_r<<0.9960494930054732, 0.08865350459897035, 0.005095449525217566,
-  					0.08863064569634099, -0.996054169288991, 0.004549778617652745,
-  					0.005478697563598811, -0.004080191703869161, -0.9999766676821358;
-		base2eye_t<<0.07959135656162009,-0.7650566101705008,0.9265312081958853;
+		base2eye_r<<0.03308510442216442, -0.9990111993421, 0.02969844289965112,
+  					-0.999440603164699, -0.03321500484350666, -0.003890988412249358,
+  					0.004873575509995856, -0.02955308484901648, -0.9995512790596954;
+		base2eye_t<<-0.4792858102453171,-0.6272767204865666,0.7123777245156747;
 		base2eye_q=base2eye_r;
 	}
 	
@@ -446,7 +446,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     else if(!Simulation)
     {
-        fingerControl(0.1);               //实物，Simulation宏改为0
+        fingerControl(0.4);               //实物，Simulation宏改为0
     }
     //抓取完毕
 #endif
@@ -461,27 +461,27 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 	}
 	else
 	{
-		point.z =0.17;
+		point.z =0.065;
 	}
 	
 
     moveit::planning_interface::MoveGroup::Plan pick_plan;
     moveit::planning_interface::MoveGroup::Plan place_plan;
 	
-	if(Simulation)
+	//if(Simulation)
 	{
 		orientation.x = 1;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     	orientation.y = 0;
     	orientation.z = 0;
     	orientation.w = 0;
 	}
-	else
+	/*else
 	{
 		orientation.x = curTargetPoint.qx;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     	orientation.y = curTargetPoint.qy;
     	orientation.z = curTargetPoint.qz;
     	orientation.w = curTargetPoint.qw;
-	}
+	}*/
 
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
@@ -571,7 +571,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     else if(!Simulation)
     {
-        fingerControl(0.1);              //实物，Simulation宏改为0
+        fingerControl(0.4);              //实物，Simulation宏改为0
     }
     //松开完毕
 #endif
@@ -653,13 +653,25 @@ void setPlacePose()
     placePose.orientation.w = 0;
 
 #else
-    placePose.position.x = -0.2; 
-    placePose.position.y = 0.45;   
-    placePose.position.z = 0.2;   
-    placePose.orientation.x = 1;
-    placePose.orientation.y = 0;
-    placePose.orientation.z = 0;
-    placePose.orientation.w = 0;
+    placePose.position.x = -0.02065; 
+    placePose.position.y = -0.52572;   
+    placePose.position.z = 0.22727;   
+    placePose.orientation.x = -0.36804;
+    placePose.orientation.y = -0.92948;
+    placePose.orientation.z = -0.02149;
+    placePose.orientation.w = -0.01206;
+/*
+position: 
+    x: -0.0206517521292
+    y: -0.525723576546
+    z: 0.22727099061
+  orientation: 
+    x: -0.368041366339
+    y: -0.929482519627
+    z: -0.0214987620711
+    w: -0.0120657179505
+*/
+
 #endif
 
 // 如果使用UR实物，请解除下面三行的注释
@@ -686,13 +698,14 @@ void goPlacePose(geometry_msgs::Pose placePose)
 #else
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
 	std::vector< double > jointValues;
-    jointValues.push_back(-1.85898);
-    jointValues.push_back(2.55679);
-    jointValues.push_back(2.97745);
-    jointValues.push_back(1.61764);
-    jointValues.push_back(9.52694);
-    jointValues.push_back(2.0954);
-    jointValues.push_back(-20.89891);
+    jointValues.push_back(4.83313);
+    jointValues.push_back(3.78431);
+    jointValues.push_back(-0.08017);
+    jointValues.push_back(1.83814);
+    jointValues.push_back(0.01225);
+    jointValues.push_back(4.37178);
+    jointValues.push_back(5.58057);
+//4.833135638944446, 3.7843186194889715, -0.08017441468256502, 1.8381452096735533, 0.012253705598753566, 4.371782128556243, 5.580578963118303, 1.2862050737546311, 1.2935969436762549, 1.0669095372160646
     arm_group.setJointValueTarget(jointValues);
     //arm_group.setPoseTarget(placePose);
 #endif
