@@ -64,6 +64,7 @@ float openVal=0.4;
 float closeVal=0.9;
 float highVal=0.05;
 float openVal_real=0.4;
+float colseVal_real=0.9;
 //                        1       2      3      4      5      6      7      8      9      10
 float closeVals[10]=    {1.300, 0.960, 1.050, 1.200, 1.200, 1.050, 0.960, 1.300, 0.950, 1.200};
 float highVals[10]=     {0.065, 0.050, 0.050, 0.015, 0.030, 0.030, 0.020, 0.065, 0.050, 0.030};
@@ -534,7 +535,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     else if(!Simulation)
     {
-        fingerControl(0.9);               //实物，Simulation宏改为0
+        fingerControl(colseVal_real);               //实物，Simulation宏改为0
     }
     //抓取完毕
 #endif
