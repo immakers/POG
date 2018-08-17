@@ -24,7 +24,7 @@
 //关节位置信息
 #include <sensor_msgs/JointState.h>
 
-#define Simulation 1     //仿真为1，实物为0
+#define Simulation 0     //仿真为1，实物为0
 //#define UR5		//使用ur5
 
 //相机参数和深度信息用于计算
@@ -69,8 +69,8 @@ float colseVal_real=0.9;
 //                        1       2      3      4      5      6      7      8      9      10
 float closeVals[10]=    {1.300, 0.960, 1.050, 1.200, 1.200, 1.050, 0.960, 1.300, 0.950, 1.200};
 float highVals[10]=     {0.065, 0.050, 0.050, 0.015, 0.030, 0.030, 0.020, 0.065, 0.050, 0.030};
-float openVals[10]=     {0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.550, 0.400};
-float openVals_real[10]={0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.550, 0.400};
+float openVals[10]=     {0.900, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.600, 0.400};
+float openVals_real[10]={0.450, 0.550, 0.500, 0.450, 0.450, 0.450, 0.450, 0.500, 0.550, 0.400};
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 //bool getTags();
@@ -143,15 +143,21 @@ int main(int argc, char **argv)
 		base2eye_r<<-1, 0, 0,
   					0, 1, 0,
   					0, 0, -1;
-		base2eye_t<<0.321,0.46,0.8;
+		base2eye_t<<0.321,0.465,0.8;
 		base2eye_q=base2eye_r;
 	}
 	else
 	{
+/*
 		base2eye_r<<0.03308510442216442, -0.9990111993421, 0.02969844289965112,
   					-0.999440603164699, -0.03321500484350666, -0.003890988412249358,
   					0.004873575509995856, -0.02955308484901648, -0.9995512790596954;
 		base2eye_t<<-0.4792858102453171,-0.6272767204865666,0.7123777245156747;
+*/
+		base2eye_r<<0.03987850315745504, -0.9983644689103439, 0.0409645598956026,
+  -0.9991532230553034, -0.04025866849946766, -0.008497584936757424,
+  0.01013286480428582, -0.04059101758572464, -0.999124529565749;
+		base2eye_t<<-0.4806973074164019,-0.6307561730164741,0.7135981438283375;
 		base2eye_q=base2eye_r;
 	}
 	
@@ -455,7 +461,7 @@ void haveGoal(const vector<int>& targetsTag, int& cur_target, kinova_arm_moveit_
 	
 			//获取当前抓取物品的位置
 			curTargetPoint.x=base_center3d(0);
-			curTargetPoint.y=base_center3d(1);
+			curTargetPoint.y=base_center3d(1)+0.08;
 			curTargetPoint.z=base_center3d(2);
 			ROS_INFO("curTargetPoint: %f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
 			//curTargetPoint.x=-0.27;
@@ -561,6 +567,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     	jointValues.push_back(openVal);
     	finger_group->setJointValueTarget(jointValues);
 		finger_group->move();
+		cout<<"openVal:"<<openVal<<endl;
     }
     else if(!Simulation)
     {
@@ -579,27 +586,27 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
 	}
 	else
 	{
-		point.z =0.065;
+		point.z =0.07;
 	}
 	
 
     moveit::planning_interface::MoveGroup::Plan pick_plan;
     moveit::planning_interface::MoveGroup::Plan place_plan;
 	
-	//if(Simulation)
+	if(Simulation)
 	{
 		orientation.x = 1;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     	orientation.y = 0;
     	orientation.z = 0;
     	orientation.w = 0;
 	}
-	/*else
+	else
 	{
 		orientation.x = curTargetPoint.qx;//方向由视觉节点给定－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－－Petori
     	orientation.y = curTargetPoint.qy;
     	orientation.z = curTargetPoint.qz;
     	orientation.w = curTargetPoint.qw;
-	}*/
+	}
 
     targetPose.position = point;// 设置好目标位姿为可用的格式
     targetPose.orientation = orientation;
