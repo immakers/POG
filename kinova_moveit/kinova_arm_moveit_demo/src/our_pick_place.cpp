@@ -41,7 +41,8 @@ typedef actionlib::SimpleActionClient<kinova_msgs::SetFingersPositionAction> Fin
 
 //全局变量
 const double FINGER_MAX = 6400;	//手指开合程度：0完全张开，6400完全闭合
-const int n_MAX=10;			//同一物品最大抓取次数
+const int n_MAX=3;			//同一物品最大抓取次数
+const int N_MAX=70;        //循环抓取允许最大识别不到的次数，超出此次数识别结束
 vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
 geometry_msgs::Pose placePose;	//机械臂抓取放置位置,为规划方便，将放置位置设为起始位置
@@ -80,7 +81,8 @@ void tagsCB(const rviz_teleop_commander::targets_tag &msg);
 
 //如果当前待抓取目标存在返回1,并且更新curTargetPoint，如果当前目标不存在但还有需要抓取的目标,或者抓取次数达到上限返回2，如果全部抓完或者一个目标物都没有返回3
 int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint, const int& n);
-
+//循环检测当前视觉识别中是否还有要抓取的目标
+void haveGoal(const vector<int>& targetsTag, int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint, int& n, int& goalState);
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合
 bool fingerControl(double finger_turn);
 //机械臂运动控制函数
@@ -208,6 +210,7 @@ int main(int argc, char **argv)
 		{
 			//判断当前抓取目标是否存在
 			kinova_arm_moveit_demo::targetState curTargetPoint;    //当前抓取点的xyz,后续考虑加姿态
+/*
 			int goalState=haveGoal(targetsTag,cur_target,curTargetPoint,n);
 			if(goalState==1 && n<n_MAX)		//如果当前目标存在且抓取次数未达上限
 			{
@@ -240,6 +243,38 @@ int main(int argc, char **argv)
 			{
 				break;
 			}
+*/
+			//循环抓取
+			int goalState=0;
+			haveGoal(targetsTag,cur_target,curTargetPoint,n,goalState);
+			if(goalState==1)  //有要抓取的目标
+			{
+				//发布抓取状态
+				grabResultMsg.now_target=targetsTag[cur_target];
+				grabResultMsg.grab_times=n;
+				grab_result_pub.publish(grabResultMsg);
+
+				//进行抓取放置，要求抓取放置后返回初始位置
+				//周佩---机械臂运动控制---执行抓取－放置－过程
+                pickAndPlace(curTargetPoint);
+				
+				getTargets=0;		//执行完抓取置0，等待下一次视觉检测结果
+				//让visual_detect节点进行检测
+				detectTarget.data=1;		//让visual_detect节点进行视觉检测
+				detectTarget_pub.publish(detectTarget);
+			}
+			else if(goalState==2)
+			{
+				//让visual_detect节点进行检测
+				detectTarget.data=1;		//让visual_detect节点进行视觉检测
+				detectTarget_pub.publish(detectTarget);
+			}
+			else if(goalState==3)			//所有目标抓取完成
+			{
+				break;
+			}
+			cur_target++;
+			
 		}
 		ros::Duration(0.2).sleep();
 	}
@@ -382,6 +417,83 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 	}
 	ROS_INFO("have goal");
 	return 2;
+}
+
+//循环检测当前视觉识别中是否还有要抓取的目标
+void haveGoal(const vector<int>& targetsTag, int& cur_target, kinova_arm_moveit_demo::targetState& curTargetPoint, int& n, int& goalState)
+{
+	int n_targetsTag=targetsTag.size();	//目标标签个数
+	int n_targets=targets.size();		//检测到的物品的个数
+	cur_target=cur_target%n_targetsTag;
+	for(int i=0;i<n_targets;i++)
+	{
+		if(targetsTag[cur_target]==targets[i].tag)
+		{
+			//目标物在相机坐标系下的坐标转机器人坐标系下的坐标
+			Eigen::Vector3d cam_center3d, base_center3d;
+			//仿真计算
+			if(Simulation)
+			{
+				cam_center3d(0)=(targets[i].px-UV0)*Zw/Fxy;
+				cam_center3d(1)=(targets[i].py-UV0)*Zw/Fxy;
+				cam_center3d(2)=Zw;
+				ROS_INFO("px py: %d %d",targets[i].px,targets[i].py);
+				ROS_INFO("cam_center3d: %f %f %f",cam_center3d(0),cam_center3d(1),cam_center3d(2));
+			}
+			else 
+			{
+				cam_center3d(0)=targets[i].x;
+				cam_center3d(1)=targets[i].y;
+				cam_center3d(2)=targets[i].z;
+			} 			
+			base_center3d=base2eye_r*cam_center3d+base2eye_t;
+			Eigen::Quaterniond quater(targets[i].qw,targets[i].qx,targets[i].qy,targets[i].qz);
+			quater=base2eye_q*quater;
+			//Eigen::Matrix3d tempm=quater.matrix();
+			//ROS_INFO("quater: %f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
+			//cout<<"tempm:"<<endl<<tempm<<endl;
+	
+			//获取当前抓取物品的位置
+			curTargetPoint.x=base_center3d(0);
+			curTargetPoint.y=base_center3d(1);
+			curTargetPoint.z=base_center3d(2);
+			ROS_INFO("curTargetPoint: %f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
+			//curTargetPoint.x=-0.27;
+			//curTargetPoint.y=0.5;
+
+			curTargetPoint.qx=quater.x();	
+			curTargetPoint.qy=quater.y();
+			curTargetPoint.qz=quater.z();
+			curTargetPoint.qw=quater.w();
+			ROS_INFO("have goal 1");
+			ROS_INFO("%d",targets[i].tag);
+			//ROS_INFO("%f %f %f %f",curTargetPoint.qx,curTargetPoint.qy,curTargetPoint.qz,curTargetPoint.qw);
+			//手抓闭合程度，抓取高度
+			if(Simulation)
+			{
+				closeVal=closeVals[targetsTag[cur_target]-1];
+				highVal=highVals[targetsTag[cur_target]-1];
+				openVal=openVals[targetsTag[cur_target]-1];
+			}
+			else
+			{
+				openVal_real=openVals_real[targetsTag[cur_target]-1];
+			}
+			n++;
+			goalState=1;  	//找到目标
+			return;
+		}
+	}
+	
+	n++;
+	if(n>N_MAX)
+	{
+		goalState=3;		//没有目标，退出
+		return;
+	}
+	else
+	goalState==2;			//当前帧没有要抓取的目标继续检测
+	return;
 }
 
 //手抓控制函数，输入0-1之间的控制量，控制手抓开合程度，0完全张开，1完全闭合 added by yang 20180418
