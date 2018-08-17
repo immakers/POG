@@ -1,15 +1,11 @@
 //#include <ros/ros.h>
 #include <moveit/move_group_interface/move_group.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-
 #include <moveit_msgs/DisplayRobotState.h>
 #include <moveit_msgs/DisplayTrajectory.h>
-
 #include <kinova_driver/kinova_ros_types.h>
-
 #include <actionlib/client/simple_action_client.h>
 #include <kinova_msgs/SetFingersPositionAction.h>
-
 #include <iostream>
 #include <vector>
 
@@ -56,7 +52,6 @@ bool getTargetsTag=0;	//当接收到需要抓取的目标物的标签时置1，�
 //定义机器人类型，手指控制 added by yang 20180418
 string kinova_robot_type = "j2s7s300";
 string Finger_action_address = "/" + kinova_robot_type + "_driver/fingers_action/finger_positions";    //手指控制服务器的名称
-
 //定义手指控制client added by yang 20180418
 Finger_actionlibClient* client=NULL;
 
@@ -68,10 +63,12 @@ Eigen::Quaterniond base2eye_q;
 float openVal=0.4;
 float closeVal=0.9;
 float highVal=0.05;
-//                    1      2     3     4     5     6     7     8     9    10
-float closeVals[10]={1.30, 0.96,  1.05, 1.2, 1.20, 1.05, 0.96, 1.30, 0.95, 1.20};
-float highVals[10]={0.065, 0.05, 0.05, 0.015, 0.03, 0.03, 0.02, 0.065, 0.05, 0.03};
-float openVals[10]= {0.40, 0.40, 0.40, 0.40, 0.40, 0.40, 0.40, 0.40, 0.55, 0.40};
+float openVal_real=0.4;
+//                        1       2      3      4      5      6      7      8      9      10
+float closeVals[10]=    {1.300, 0.960, 1.050, 1.200, 1.200, 1.050, 0.960, 1.300, 0.950, 1.200};
+float highVals[10]=     {0.065, 0.050, 0.050, 0.015, 0.030, 0.030, 0.020, 0.065, 0.050, 0.030};
+float openVals[10]=     {0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.550, 0.400};
+float openVals_real[10]={0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.550, 0.400};
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 //bool getTags();
@@ -369,9 +366,16 @@ int haveGoal(const vector<int>& targetsTag, const int& cur_target, kinova_arm_mo
 			ROS_INFO("%d",targets[i].tag);
 			//ROS_INFO("%f %f %f %f",curTargetPoint.qx,curTargetPoint.qy,curTargetPoint.qz,curTargetPoint.qw);
 			//手抓闭合程度，抓取高度
-			closeVal=closeVals[targetsTag[cur_target]-1];
-			highVal=highVals[targetsTag[cur_target]-1];
-			openVal=openVals[targetsTag[cur_target]-1];
+			if(Simulation)
+			{
+				closeVal=closeVals[targetsTag[cur_target]-1];
+				highVal=highVals[targetsTag[cur_target]-1];
+				openVal=openVals[targetsTag[cur_target]-1];
+			}
+			else
+			{
+				openVal_real=openVals_real[targetsTag[cur_target]-1];
+			}
 			return 1;
 		}
 	}
@@ -447,7 +451,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     else if(!Simulation)
     {
-        fingerControl(0.4);               //实物，Simulation宏改为0
+        fingerControl(openVal_real);               //实物，Simulation宏改为0
     }
     //抓取完毕
 #endif
@@ -572,7 +576,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     else if(!Simulation)
     {
-        fingerControl(0.4);              //实物，Simulation宏改为0
+        fingerControl(openVal_real);              //实物，Simulation宏改为0
     }
     //松开完毕
 #endif
@@ -609,7 +613,6 @@ std::vector<geometry_msgs::Pose> pickInterpolate(geometry_msgs::Pose startPose,g
     pickWayPoints.push_back(targetPose);
 
     return pickWayPoints;
-
 }
 
 //放置插值函数
