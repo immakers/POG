@@ -24,7 +24,7 @@
 //关节位置信息
 #include <sensor_msgs/JointState.h>
 
-#define Simulation 0     //仿真为1，实物为0
+#define Simulation 1     //仿真为1，实物为0
 //#define UR5		//使用ur5
 
 //相机参数和深度信息用于计算
@@ -67,9 +67,9 @@ float highVal=0.05;
 float openVal_real=0.4;
 float colseVal_real=0.9;
 //                        1       2      3      4      5      6      7      8      9      10
-float closeVals[10]=    {1.300, 0.960, 1.050, 1.200, 1.200, 1.050, 0.960, 1.300, 0.950, 1.200};
-float highVals[10]=     {0.065, 0.050, 0.050, 0.015, 0.030, 0.030, 0.020, 0.065, 0.050, 0.030};
-float openVals[10]=     {0.900, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.400, 0.600, 0.400};
+float closeVals[10]=    {1.200, 0.900, 1.050, 1.150, 1.200, 1.050, 0.960, 1.300, 0.950, 1.200};
+float highVals[10]=     {0.065, 0.065, 0.050, 0.025, 0.030, 0.030, 0.020, 0.065, 0.050, 0.030};
+float openVals[10]=     {0.900, 0.400, 0.400, 0.800, 0.400, 0.400, 0.400, 0.400, 0.800, 0.400};
 float openVals_real[10]={0.450, 0.550, 0.500, 0.450, 0.450, 0.450, 0.450, 0.500, 0.550, 0.400};
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 		base2eye_r<<-1, 0, 0,
   					0, 1, 0,
   					0, 0, -1;
-		base2eye_t<<0.321,0.465,0.8;
+		base2eye_t<<0.321,0.43,0.8;
 		base2eye_q=base2eye_r;
 	}
 	else
@@ -155,8 +155,8 @@ int main(int argc, char **argv)
 		base2eye_t<<-0.4792858102453171,-0.6272767204865666,0.7123777245156747;
 */
 		base2eye_r<<0.02775470241621737, -0.9983886629987773, 0.04949491417900936,
-  -0.9984233782515894, -0.03010426443992026, -0.04737458839529671,
-  0.04878826198507039, -0.04810198253680015, -0.9976501245313218;
+ 					-0.9984233782515894, -0.03010426443992026, -0.04737458839529671,
+  					0.04878826198507039, -0.04810198253680015, -0.9976501245313218;
 		base2eye_t<<-0.4961986013429963,-0.6043712289857819,0.7137581412140669;
 		base2eye_q=base2eye_r;
 	}
@@ -687,8 +687,15 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     {
     	//finger_group->setNamedTarget("Open");   //仿真使用
 		//finger_group->move();
+		//松开物品
 		std::vector< double > jointValues;
-    	jointValues.push_back(openVal);
+    	jointValues.push_back(0.15);
+    	jointValues.push_back(0.15);
+    	jointValues.push_back(0.15);
+    	finger_group->setJointValueTarget(jointValues);
+		finger_group->move();
+		//准备抓取爪子
+		jointValues.push_back(openVal);
     	jointValues.push_back(openVal);
     	jointValues.push_back(openVal);
     	finger_group->setJointValueTarget(jointValues);
@@ -696,6 +703,7 @@ void pickAndPlace(kinova_arm_moveit_demo::targetState curTargetPoint)
     }
     else if(!Simulation)
     {
+		fingerControl(0.0);  			//松开物品
         fingerControl(openVal_real);              //实物，Simulation宏改为0
     }
     //松开完毕

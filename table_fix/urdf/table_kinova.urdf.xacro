@@ -231,14 +231,20 @@
 <!-- color -->
   <gazebo reference="table">
     <material>Gazebo/Grey</material>
+	<mu1>1.0</mu1>
+    <mu2>1.0</mu2>
   </gazebo>
   
   <gazebo reference="left_basket">
     <material>Gazebo/Blue</material>
+	<mu1>1.0</mu1>
+    <mu2>1.0</mu2>
   </gazebo>
 
   <gazebo reference="right_basket">
     <material>Gazebo/Green</material>
+	<mu1>1.0</mu1>
+    <mu2>1.0</mu2>
   </gazebo>
 
 </robot>
