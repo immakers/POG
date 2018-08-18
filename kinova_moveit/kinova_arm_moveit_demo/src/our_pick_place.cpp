@@ -495,6 +495,11 @@ void haveGoal(const vector<int>& targetsTag, int& cur_target, kinova_arm_moveit_
 				goalState=1;  	//找到目标
 				return;
 			}
+			else if(!Simulation)
+			{
+				goalState=1;  	//找到目标
+				return;
+			}
 
 		}
 	}
