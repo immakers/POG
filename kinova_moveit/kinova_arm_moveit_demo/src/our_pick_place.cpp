@@ -68,8 +68,8 @@ float openVal_real=0.4;
 float colseVal_real=0.9;
 //                        1       2      3      4      5      6      7      8      9      10
 float closeVals[10]=    {1.200, 0.900, 1.050, 1.150, 1.200, 1.050, 0.960, 1.300, 0.950, 1.200};
-float highVals[10]=     {0.065, 0.065, 0.050, 0.025, 0.030, 0.030, 0.020, 0.065, 0.050, 0.030};
-float openVals[10]=     {0.900, 0.400, 0.400, 0.800, 0.400, 0.400, 0.400, 0.400, 0.800, 0.400};
+float highVals[10]=     {0.065, 0.065, 0.050, 0.025, 0.040, 0.030, 0.020, 0.065, 0.050, 0.030};
+float openVals[10]=     {0.900, 0.400, 0.400, 0.800, 0.800, 0.400, 0.400, 0.400, 0.800, 0.400};
 float openVals_real[10]={0.450, 0.550, 0.500, 0.450, 0.450, 0.450, 0.450, 0.500, 0.550, 0.400};
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
@@ -787,7 +787,7 @@ void setPlacePose()
 #else
 	if(Simulation)
 	{
-		placePose.position.x = -0.2; 
+		placePose.position.x = -0.3; 
     	placePose.position.y = 0.45;   
     	placePose.position.z = 0.2;   
     	placePose.orientation.x = 1;
@@ -841,17 +841,19 @@ void goPlacePose(geometry_msgs::Pose placePose)
     jointValues.push_back(2.1761);
     arm_group.setJointValueTarget(jointValues);
 #else
+
     moveit::planning_interface::MoveGroup arm_group("arm");	//manipulator
 	std::vector< double > jointValues;
 	if(Simulation)
 	{
-		jointValues.push_back(-1.85898);
-    	jointValues.push_back(2.55679);
-    	jointValues.push_back(2.97745);
-    	jointValues.push_back(1.61764);
-    	jointValues.push_back(9.52694);
-    	jointValues.push_back(2.0954);
-    	jointValues.push_back(-20.89891);
+		jointValues.push_back(-2.33038);
+    	jointValues.push_back(2.42892);
+    	jointValues.push_back(3.49546);
+    	jointValues.push_back(1.81877);
+    	jointValues.push_back(2.89536);
+    	jointValues.push_back(1.97723);
+    	jointValues.push_back(-14.52231);
+//-2.330385491426873, 2.428922374975784, 3.4954608508854017, 1.8187728833477639, 2.895369912172246, 1.977235290305341, -14.522311821772034,
 	}
 	else
 	{
@@ -863,7 +865,7 @@ void goPlacePose(geometry_msgs::Pose placePose)
     	jointValues.push_back(4.37178);
     	jointValues.push_back(5.58057);
 	}
-    
+  
 //4.833135638944446, 3.7843186194889715, -0.08017441468256502, 1.8381452096735533, 0.012253705598753566, 4.371782128556243, 5.580578963118303, 1.2862050737546311, 1.2935969436762549, 1.0669095372160646
     arm_group.setJointValueTarget(jointValues);
     //arm_group.setPoseTarget(placePose);
