@@ -42,7 +42,7 @@ typedef actionlib::SimpleActionClient<kinova_msgs::SetFingersPositionAction> Fin
 //全局变量
 const double FINGER_MAX = 6400;	//手指开合程度：0完全张开，6400完全闭合
 const int n_MAX=3;			//同一物品最大抓取次数
-const int N_MAX=70;        //循环抓取允许最大识别不到的次数，超出此次数识别结束
+const int N_MAX=50;        //循环抓取允许最大识别不到的次数，超出此次数识别结束
 vector<kinova_arm_moveit_demo::targetState> targets;	//视觉定位结果
 bool getTargets=0;	//当接收到视觉定位结果时getTargets置1，执行完放置后置0
 geometry_msgs::Pose placePose;	//机械臂抓取放置位置,为规划方便，将放置位置设为起始位置
@@ -67,10 +67,10 @@ float highVal=0.05;
 float openVal_real=0.4;
 float colseVal_real=0.9;
 //                        1       2      3      4      5      6      7      8      9      10
-float closeVals[10]=    {1.200, 0.900, 1.050, 1.150, 1.200, 1.050, 0.960, 1.300, 0.950, 1.200};
-float highVals[10]=     {0.065, 0.065, 0.050, 0.025, 0.040, 0.030, 0.020, 0.065, 0.050, 0.030};
-float openVals[10]=     {0.900, 0.400, 0.400, 0.800, 0.800, 0.400, 0.400, 0.400, 0.800, 0.400};
-float openVals_real[10]={0.450, 0.550, 0.500, 0.450, 0.450, 0.450, 0.450, 0.500, 0.550, 0.400};
+float closeVals[10]=    {1.150, 0.900, 1.050, 1.150, 1.200, 1.150, 0.920, 1.200, 0.950, 1.200};
+float highVals[10]=     {0.070, 0.065, 0.070, 0.030, 0.040, 0.030, 0.020, 0.055, 0.050, 0.040};
+float openVals[10]=     {0.900, 0.400, 0.700, 0.800, 0.800, 0.800, 0.400, 0.800, 0.700, 0.900};
+float openVals_real[10]={0.450, 0.650, 0.500, 0.450, 0.450, 0.450, 0.450, 0.500, 0.550, 0.400};
 
 //输入函数，接收需要抓取的目标标签,如果标签数为0，则返回false
 //bool getTags();
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 		base2eye_r<<-1, 0, 0,
   					0, 1, 0,
   					0, 0, -1;
-		base2eye_t<<0.321,0.43,0.8;
+		base2eye_t<<0.34,0.46,0.8;
 		base2eye_q=base2eye_r;
 	}
 	else
@@ -461,7 +461,11 @@ void haveGoal(const vector<int>& targetsTag, int& cur_target, kinova_arm_moveit_
 	
 			//获取当前抓取物品的位置
 			curTargetPoint.x=base_center3d(0);
-			curTargetPoint.y=base_center3d(1)+0.04;
+			curTargetPoint.y=base_center3d(1);
+			if(!Simulation)
+			{
+				curTargetPoint.y+=0.04;
+			}
 			curTargetPoint.z=base_center3d(2);
 			ROS_INFO("curTargetPoint: %f %f %f",curTargetPoint.x,curTargetPoint.y,curTargetPoint.z);
 			//curTargetPoint.x=-0.27;
@@ -486,8 +490,12 @@ void haveGoal(const vector<int>& targetsTag, int& cur_target, kinova_arm_moveit_
 				openVal_real=openVals_real[targetsTag[cur_target]-1];
 			}
 			n++;
-			goalState=1;  	//找到目标
-			return;
+			if(Simulation && (curTargetPoint.x*curTargetPoint.x+curTargetPoint.y*curTargetPoint.y > 0.08) )
+			{
+				goalState=1;  	//找到目标
+				return;
+			}
+
 		}
 	}
 	

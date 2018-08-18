@@ -230,14 +230,20 @@
 
 <!-- color -->
   <gazebo reference="table">
+	<mu1 value="1000.0"/>
+	<mu2 value="1000.0"/>
     <material>Gazebo/Grey</material>
   </gazebo>
   
   <gazebo reference="left_basket">
+	<mu1 value="2000.0"/>
+	<mu2 value="2000.0"/>
     <material>Gazebo/Blue</material>
   </gazebo>
 
   <gazebo reference="right_board">
+	<mu1 value="2000.0"/>
+	<mu2 value="2000.0"/>
     <material>Gazebo/Green</material>
   </gazebo>
 
